@@ -1,0 +1,42 @@
+#!/bin/bash
+#
+# PACE-ICE batch script for PPO reward shaping training.
+# Submit with: sbatch scripts/pace_reward_shaped.batch
+#
+
+# ── Job settings ──────────────────────────────────────────────────────────────
+#SBATCH --job-name=soccer_ppo
+#SBATCH -N1                      # 1 node (Ray handles parallelism internally)
+#SBATCH --cpus-per-task=14       # 14 CPUs: 1 main process + up to 13 workers
+#SBATCH --mem=48G
+#SBATCH --gres=gpu:V100:1        # 1 GPU for network training
+#SBATCH -t 12:00:00              # 12-hour wall time
+#SBATCH --output=logs/soccer-%j.out
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=frank.yang@gatech.edu   # ← 改成你的 GT 邮箱
+
+# ── Environment setup ─────────────────────────────────────────────────────────
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate soccertwos
+
+# Make sure log and scratch directories exist
+mkdir -p logs
+mkdir -p /scratch/$USER/soccer-twos
+
+# ── Virtual display ───────────────────────────────────────────────────────────
+# Unity binary requires a display even when not rendering visuals.
+# Start a virtual framebuffer so the binary can launch headlessly.
+Xvfb :99 -screen 0 1024x768x24 &
+XVFB_PID=$!
+export DISPLAY=:99
+sleep 2   # give Xvfb time to start
+
+echo "Job started on $(hostname) at $(date)"
+echo "Results will be saved to /scratch/$USER/soccer-twos"
+
+# ── Training ──────────────────────────────────────────────────────────────────
+python train_ppo_reward_shaped.py
+
+# ── Cleanup ───────────────────────────────────────────────────────────────────
+kill $XVFB_PID
+echo "Job finished at $(date)"

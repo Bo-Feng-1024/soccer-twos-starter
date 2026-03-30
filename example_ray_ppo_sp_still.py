@@ -5,7 +5,7 @@ from soccer_twos import EnvType
 from utils import create_rllib_env
 
 
-NUM_ENVS_PER_WORKER = 3
+NUM_ENVS_PER_WORKER = 1
 
 
 if __name__ == "__main__":
@@ -18,8 +18,8 @@ if __name__ == "__main__":
         name="PPO_SP",
         config={
             # system settings
-            "num_gpus": 1,
-            "num_workers": 8,
+            "num_gpus": 0,
+            "num_workers": 2,
             "num_envs_per_worker": NUM_ENVS_PER_WORKER,
             "log_level": "INFO",
             "framework": "torch",
