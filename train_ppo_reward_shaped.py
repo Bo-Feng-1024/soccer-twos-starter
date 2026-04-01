@@ -28,9 +28,12 @@ NUM_ENVS_PER_WORKER = 1
 
 # Auto-detect environment: PACE sets the SLURM_JOB_ID variable.
 ON_PACE = "SLURM_JOB_ID" in os.environ
-NUM_WORKERS = 10 if ON_PACE else 2
-NUM_GPUS = 1 if ON_PACE else 0
-LOCAL_DIR = os.path.join("/scratch", os.environ.get("USER", ""), "soccer-twos") if ON_PACE else "./ray_results"
+NUM_WORKERS = 8 if ON_PACE else 2
+NUM_GPUS = 0
+# On PACE, save results next to this script (which is already in scratch).
+# On local Mac, save to ./ray_results
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+LOCAL_DIR = os.path.join(SCRIPT_DIR, "ray_results") if ON_PACE else "./ray_results"
 
 print(f"Running on {'PACE cluster' if ON_PACE else 'local machine'}: "
       f"{NUM_WORKERS} workers, {NUM_GPUS} GPUs, saving to {LOCAL_DIR}")
@@ -59,7 +62,7 @@ if __name__ == "__main__":
                 "multiagent": False,
                 "single_player": True,
                 "flatten_branched": True,
-                "opponent_policy": lambda *_: 0,   # opponent stays still
+                "opponent_policy": None,  # random opponent (default)
                 "reward_shaping": True,             # <-- the modification
             },
             # model (same as baseline for fair comparison)
@@ -77,6 +80,7 @@ if __name__ == "__main__":
         checkpoint_freq=10,
         checkpoint_at_end=True,
         local_dir=LOCAL_DIR,
+        # restore="<checkpoint_path>/checkpoint_000890/checkpoint-890",  # uncomment to continue from still-opponent training
     )
 
     best_trial = analysis.get_best_trial("episode_reward_mean", mode="max")

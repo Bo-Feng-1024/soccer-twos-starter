@@ -19,7 +19,8 @@ if __name__ == "__main__":
         config={
             # system settings
             "num_gpus": 0,
-            "num_workers": 2,
+            "num_workers": 8, #SLURM申请了 2个节点 × 4个task/节点 = 8个CPU cores // 12H 训练了900Rounds 
+            # 32 workers 不行 分配不到
             "num_envs_per_worker": NUM_ENVS_PER_WORKER,
             "log_level": "INFO",
             "framework": "torch",

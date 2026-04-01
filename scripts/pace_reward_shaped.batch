@@ -1,42 +1,28 @@
 #!/bin/bash
-#
-# PACE-ICE batch script for PPO reward shaping training.
-# Submit with: sbatch scripts/pace_reward_shaped.batch
-#
 
-# ── Job settings ──────────────────────────────────────────────────────────────
-#SBATCH --job-name=soccer_ppo
-#SBATCH -N1                      # 1 node (Ray handles parallelism internally)
-#SBATCH --cpus-per-task=14       # 14 CPUs: 1 main process + up to 13 workers
-#SBATCH --mem=48G
-#SBATCH --gres=gpu:V100:1        # 1 GPU for network training
-#SBATCH -t 12:00:00              # 12-hour wall time
-#SBATCH --output=logs/soccer-%j.out
+# Soccer Twos RL Training Job Example Batch Script for PACE
+# Author: Mili Das
+# Date: 2026
+
+# Replace gburdell3 with your GT username.
+# Replace the training script name with the actual script you want to run.
+
+#SBATCH --job-name=soccertwos
+#SBATCH -N2 --ntasks-per-node=4
+#SBATCH --mem-per-cpu=6G
+#SBATCH -t12:00:00
+#SBATCH --output=soccertwos-%j.out
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=frank.yang@gatech.edu   # ← 改成你的 GT 邮箱
+#SBATCH --mail-user=frank.yang@gatech.edu
 
-# ── Environment setup ─────────────────────────────────────────────────────────
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate soccertwos
 
-# Make sure log and scratch directories exist
-mkdir -p logs
-mkdir -p /scratch/$USER/soccer-twos
+# Fix protobuf version conflict with ray==1.4.0
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
-# ── Virtual display ───────────────────────────────────────────────────────────
-# Unity binary requires a display even when not rendering visuals.
-# Start a virtual framebuffer so the binary can launch headlessly.
-Xvfb :99 -screen 0 1024x768x24 &
-XVFB_PID=$!
-export DISPLAY=:99
-sleep 2   # give Xvfb time to start
+# Run the training script
+/storage/ice1/7/4/fyang365/.conda/conda_envs/soccertwos/bin/python train_ppo_reward_shaped.py
 
-echo "Job started on $(hostname) at $(date)"
-echo "Results will be saved to /scratch/$USER/soccer-twos"
 
-# ── Training ──────────────────────────────────────────────────────────────────
-python train_ppo_reward_shaped.py
 
-# ── Cleanup ───────────────────────────────────────────────────────────────────
-kill $XVFB_PID
-echo "Job finished at $(date)"
