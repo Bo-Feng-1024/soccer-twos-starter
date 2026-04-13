@@ -24,7 +24,10 @@ class SelfPlayUpdateCallback(DefaultCallbacks):
         """
         Update multiagent oponent weights when reward is high enough
         """
-        if info["result"]["episode_reward_mean"] > 0.5:
+        # if info["result"]["episode_reward_mean"] > 0.3:  # game signal now dominates (shaped reward ~0.3/episode, game ±1/goal)
+        # Use default policy's own reward (not episode mean which averages all policies to ~0 in self-play)
+        default_reward = info["result"].get("policy_reward_mean", {}).get("default", -999)
+        if default_reward > 0.2:
             print("---- Updating opponents!!! ----")
             trainer = info["trainer"]
             trainer.set_weights(
@@ -38,6 +41,8 @@ class SelfPlayUpdateCallback(DefaultCallbacks):
 
 if __name__ == "__main__":
     ray.init()
+    # #ray.init(include_dashboard=False)
+    # ray.init(include_dashboard=False, ignore_reinit_error=True)
 
     tune.registry.register_env("Soccer", create_rllib_env)
     temp_env = create_rllib_env()
@@ -50,8 +55,8 @@ if __name__ == "__main__":
         name="PPO_selfplay_rec",
         config={
             # system settings
-            "num_gpus": 1,
-            "num_workers": 8,
+            "num_gpus": 0, # Unity simulation CAN NOT use GPU && MLP is too small => keep CPU only
+            "num_workers": 7,
             "num_envs_per_worker": NUM_ENVS_PER_WORKER,
             "log_level": "INFO",
             "framework": "torch",
@@ -64,7 +69,10 @@ if __name__ == "__main__":
                     "opponent_2": (None, obs_space, act_space, {}),
                     "opponent_3": (None, obs_space, act_space, {}),
                 },
-                "policy_mapping_fn": tune.function(policy_mapping_fn),
+                # "policy_mapping_fn": tune.function(policy_mapping_fn), 
+                # # DeprecationWarning: wrapping <function policy_mapping_fn at 0x155547bb4550> with tune.function() is no longer needed
+                # So I changed to the line below 
+                "policy_mapping_fn": policy_mapping_fn,
                 "policies_to_train": ["default"],
             },
             "env": "Soccer",
@@ -77,11 +85,13 @@ if __name__ == "__main__":
             "rollout_fragment_length": 5000,
             "batch_mode": "complete_episodes",
         },
-        stop={"timesteps_total": 15000000, "time_total_s": 7200,},  # 2h
+        # stop={"timesteps_total": 15000000, "time_total_s": 7200,},  # 2h
+        # stop={"timesteps_total": 15000000, "time_total_s": 43200,},  # 12h
+        stop={"timesteps_total": 15000000, "time_total_s": 86400,},  # 24h
         checkpoint_freq=100,
         checkpoint_at_end=True,
         local_dir="./ray_results",
-        # restore="./ray_results/PPO_selfplay_twos_2/PPO_Soccer_a8b44_00000_0_2021-09-18_11-13-55/checkpoint_000600/checkpoint-600",
+        restore="./ray_results/PPO_selfplay_rec/PPO_Soccer_eb80a_00000_0_2026-04-12_02-57-50/checkpoint_000900/checkpoint-900",
     )
 
     # Gets best trial based on max accuracy across all training iterations.
