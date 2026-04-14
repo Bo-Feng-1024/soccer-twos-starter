@@ -19,7 +19,7 @@ from ray.rllib.agents.callbacks import DefaultCallbacks
 from utils import create_rllib_env
 
 
-NUM_ENVS_PER_WORKER = 5
+NUM_ENVS_PER_WORKER = 3
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 CEIA_CHECKPOINT = os.path.join(
