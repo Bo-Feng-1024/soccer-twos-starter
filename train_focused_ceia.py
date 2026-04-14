@@ -136,7 +136,7 @@ if __name__ == "__main__":
         },
         stop={
             "timesteps_total": 30_000_000,
-            "time_total_s": 82800,  # 23h (leave 1h buffer for PACE cleanup)
+            "time_total_s": 41400,  # 11.5h (leave 30min buffer for PACE cleanup)
         },
         checkpoint_freq=50,
         checkpoint_at_end=True,
