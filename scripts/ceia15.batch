@@ -7,7 +7,7 @@
 # Replace gburdell3 with your GT username.
 # Replace the training script name with the actual script you want to run.
 
-#SBATCH --job-name=threshold_0dot3
+#SBATCH --job-name=ceia_15%
 #SBATCH -N1 --ntasks-per-node=24
 #SBATCH --mem-per-cpu=6G
 #SBATCH -t12:00:00
@@ -30,7 +30,7 @@ export RAY_DISABLE_IMPORT_WARNING=1
 export RAY_DASHBOARD_DISABLED=1
 
 # Run the training script
-/storage/ice1/7/4/fyang365/.conda/conda_envs/soccertwos/bin/python train_ray_selfplay.py
+/storage/ice1/7/4/fyang365/.conda/conda_envs/soccertwos/bin/python train_ray_selfplay_league.py
 
 
 #Note: Maximum allowed 24 cores

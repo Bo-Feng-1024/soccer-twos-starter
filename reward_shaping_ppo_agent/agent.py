@@ -15,7 +15,7 @@ from soccer_twos import AgentInterface
 ALGORITHM = "PPO"
 CHECKPOINT_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "../ray_results/PPO_selfplay_rec/PPO_Soccer_eb80a_00000_0_2026-04-12_02-57-50/checkpoint_000900/checkpoint-900", #ray 1.4 retrain version
+    "../ray_results/PPO_team/PPO_Soccer_6dc4e_00000_0_2026-04-13_21-01-12/checkpoint_002429/checkpoint-2429", #ray 1.4 retrain version
 )
 POLICY_NAME = "default"
 
