@@ -28,10 +28,7 @@ CEIA_CHECKPOINT = os.path.join(
     "PPO_Soccer_f475e_00000_0_2021-09-19_15-54-02/checkpoint_002449/checkpoint-2449",
 )
 
-RESTORE_CHECKPOINT = (
-    "./ray_results/PPO_team/"
-    "PPO_Soccer_6dc4e_00000_0_2026-04-13_21-01-12/checkpoint_002429/checkpoint-2429"
-)
+RESTORE_CHECKPOINT = None  # Train from scratch with optimized hyperparameters
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -144,7 +141,7 @@ if __name__ == "__main__":
         checkpoint_freq=50,
         checkpoint_at_end=True,
         local_dir="./ray_results",
-        restore=RESTORE_CHECKPOINT,
+        **({"restore": RESTORE_CHECKPOINT} if RESTORE_CHECKPOINT else {}),
     )
 
     best_trial = analysis.get_best_trial("episode_reward_mean", mode="max")
