@@ -15,7 +15,7 @@ from soccer_twos import AgentInterface
 ALGORITHM = "PPO"
 CHECKPOINT_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "../ray_results/PPO_team/PPO_Soccer_6dc4e_00000_0_2026-04-13_21-01-12/checkpoint_002429/checkpoint-2429", #ray 1.4 retrain version
+    "../ray_results/PPO_focused_ceia/PPO_Soccer_2cdb4_00000_0_2026-04-14_17-59-16/checkpoint_000050/checkpoint-50",
 )
 POLICY_NAME = "default"
 
@@ -50,42 +50,32 @@ class RewardShapingPPOAgent(AgentInterface):
         # no need for parallelism on evaluation
         config["num_workers"] = 0
         config["num_gpus"] = 0
+        config["disable_env_checking"] = True
 
-        # # ====[edstem#104] PATCH for DummyEnv =====
-        # # https://edstem.org/us/courses/92385/discussion/7884350
-        # from soccer_twos.utils import DummyEnv
-        # from utils import RLLibWrapper
-
-        # obs_space = env.observation_space
-        # act_space = env.action_space
-        # tune.registry.register_env("DummyEnv", lambda *_: RLLibWrapper(DummyEnv(obs_space, act_space)))
-
-        # # create a dummy env since it's required but we only care about the policy
-        tune.registry.register_env("DummyEnv", lambda *_: BaseEnv())
-        # # ==== END PATCH =====
+        # ====[edstem#104] PATCH for DummyEnv =====
+        from soccer_twos.utils import DummyEnv
+        from utils import RLLibWrapper
+        obs_space = env.observation_space
+        act_space = env.action_space
+        tune.registry.register_env("DummyEnv", lambda *_: RLLibWrapper(DummyEnv(obs_space, act_space)))
         config["env"] = "DummyEnv"
-        #config["disable_env_checking"] = True # Add this to avoid check the DummyEnv --- IGNORE ---
 
         # create the Trainer from config
         cls = get_trainable_cls(ALGORITHM)
         agent = cls(env=config["env"], config=config)
-        # load state from checkpoint
 
-        # ===== PATCH for Ray 1.4 checkpoint loading =====
-        agent.restore(CHECKPOINT_PATH)
-        # # replace:  agent.restore(CHECKPOINT_PATH)
-        # with open(CHECKPOINT_PATH, "rb") as f:
-        #     checkpoint_data = pickle.load(f)
-        # worker_state = pickle.loads(checkpoint_data["worker"])
-        # weights = {
-        #     pid: {
-        #         k: v for k, v in state.items()
-        #         if k != "_optimizer_variables"
-        #     }
-        #     for pid, state in worker_state["state"].items()
-        # }
-        # agent.workers.local_worker().set_weights(weights)
-        # ===== END PATCH =====
+        # ===== PATCH: skip optimizer state (numpy object_ incompatibility) =====
+        with open(CHECKPOINT_PATH, "rb") as f:
+            checkpoint_data = pickle.load(f)
+        worker_state = pickle.loads(checkpoint_data["worker"])
+        weights = {
+            pid: {
+                k: v for k, v in state.items()
+                if k != "_optimizer_variables"
+            }
+            for pid, state in worker_state["state"].items()
+        }
+        agent.workers.local_worker().set_weights(weights)
         
         # get policy for evaluation
         self.policy = agent.get_policy(POLICY_NAME)
