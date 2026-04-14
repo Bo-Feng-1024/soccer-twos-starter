@@ -19,7 +19,7 @@ from ray.rllib.agents.callbacks import DefaultCallbacks
 from utils import create_rllib_env
 
 
-NUM_ENVS_PER_WORKER = 3
+NUM_ENVS_PER_WORKER = 5
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 CEIA_CHECKPOINT = os.path.join(
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         },
         stop={
             "timesteps_total": 30_000_000,
-            "time_total_s": 41400,  # 11.5h (leave 30min buffer for PACE cleanup)
+            "time_total_s": 61200,  # 17h (leave 30min buffer for PACE cleanup)
         },
         checkpoint_freq=50,
         checkpoint_at_end=True,

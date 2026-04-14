@@ -6,7 +6,7 @@
 #SBATCH --job-name=focused_ceia
 #SBATCH -N1 --ntasks-per-node=24
 #SBATCH --mem-per-cpu=6G
-#SBATCH -t12:00:00
+#SBATCH -t17:30:00
 #SBATCH --output=soccerstwos-%j.out
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=bfeng66@gatech.edu
