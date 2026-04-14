@@ -69,15 +69,8 @@ class RayAgent(AgentInterface):
         # create the Trainer from config
         cls = get_trainable_cls(ALGORITHM)
         agent = cls(env=config["env"], config=config)
-        # load state from checkpoint — extract model weights only
-        with open(CHECKPOINT_PATH, "rb") as f:
-            checkpoint_data = pickle.load(f)
-        worker_state = pickle.loads(checkpoint_data["worker"])
-        weights = {
-            pid: state["weights"]
-            for pid, state in worker_state["state"].items()
-        }
-        agent.workers.local_worker().set_weights(weights)
+        # load state from checkpoint (old Ray format — agent.restore works)
+        agent.restore(CHECKPOINT_PATH)
         # get policy for evaluation
         self.policy = agent.get_policy(POLICY_NAME)
 
