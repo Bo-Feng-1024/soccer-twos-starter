@@ -56,28 +56,17 @@ class RayAgent(AgentInterface):
         # no need for parallelism on evaluation
         config["num_workers"] = 0
         config["num_gpus"] = 0
-        config["disable_env_checking"] = True
 
-        # create a dummy env with proper obs/act spaces
-        from soccer_twos.utils import DummyEnv
-        from utils import RLLibWrapper
-        obs_space = env.observation_space
-        act_space = env.action_space
-        tune.registry.register_env("DummyEnv", lambda *_: RLLibWrapper(DummyEnv(obs_space, act_space)))
+        # create a dummy env since it's required but we only care about the policy
+        tune.registry.register_env("DummyEnv", lambda *_: BaseEnv())
         config["env"] = "DummyEnv"
+        
 
         # create the Trainer from config
         cls = get_trainable_cls(ALGORITHM)
         agent = cls(env=config["env"], config=config)
-        # load state from checkpoint (old Ray format — weights at top level)
-        with open(CHECKPOINT_PATH, "rb") as f:
-            checkpoint_data = pickle.load(f)
-        worker_state = pickle.loads(checkpoint_data["worker"])
-        weights = {
-            pid: {k: v for k, v in state.items() if k != "_optimizer_variables"}
-            for pid, state in worker_state["state"].items()
-        }
-        agent.workers.local_worker().set_weights(weights)
+        # load state from checkpoint
+        agent.restore(CHECKPOINT_PATH)
         # get policy for evaluation
         self.policy = agent.get_policy(POLICY_NAME)
 
