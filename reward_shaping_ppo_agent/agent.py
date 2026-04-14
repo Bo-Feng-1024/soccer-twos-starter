@@ -64,15 +64,12 @@ class RewardShapingPPOAgent(AgentInterface):
         cls = get_trainable_cls(ALGORITHM)
         agent = cls(env=config["env"], config=config)
 
-        # ===== PATCH: skip optimizer state (numpy object_ incompatibility) =====
+        # ===== PATCH: load only model weights (skip optimizer state) =====
         with open(CHECKPOINT_PATH, "rb") as f:
             checkpoint_data = pickle.load(f)
         worker_state = pickle.loads(checkpoint_data["worker"])
         weights = {
-            pid: {
-                k: v for k, v in state.items()
-                if k != "_optimizer_variables"
-            }
+            pid: state["weights"]
             for pid, state in worker_state["state"].items()
         }
         agent.workers.local_worker().set_weights(weights)
