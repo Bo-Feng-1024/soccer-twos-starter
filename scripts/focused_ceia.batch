@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Focused CEIA training — 100% ceia opponent + optimized PPO hyperparameters
+# Based on team_ceia50.batch
+
+#SBATCH --job-name=focused_ceia
+#SBATCH -N1 --ntasks-per-node=24
+#SBATCH --mem-per-cpu=6G
+#SBATCH -t24:00:00
+#SBATCH --output=soccerstwos-%j.out
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=bfeng66@gatech.edu
+
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate soccertwos
+
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+pkill -u $USER -f soccer
+pkill -u $USER -f Unity
+
+export RAY_DISABLE_IMPORT_WARNING=1
+export RAY_DASHBOARD_DISABLED=1
+
+python train_focused_ceia.py
