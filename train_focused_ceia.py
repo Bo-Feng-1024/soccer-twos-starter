@@ -28,7 +28,10 @@ CEIA_CHECKPOINT = os.path.join(
     "PPO_Soccer_f475e_00000_0_2021-09-19_15-54-02/checkpoint_002449/checkpoint-2449",
 )
 
-RESTORE_CHECKPOINT = None  # Train from scratch with optimized hyperparameters
+RESTORE_CHECKPOINT = (
+    "./ray_results/PPO_team/"
+    "PPO_Soccer_17b64_00000_0_2026-04-14_16-18-26/checkpoint_004500/checkpoint-4500"
+)
 # ──────────────────────────────────────────────────────────────────────────────
 
 
