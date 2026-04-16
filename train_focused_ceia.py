@@ -27,8 +27,8 @@ CEIA_CHECKPOINT = os.path.join(
 )
 
 RESTORE_CHECKPOINT = (
-    "./ray_results/PPO_team/"
-    "PPO_Soccer_17b64_00000_0_2026-04-14_16-18-26/checkpoint_004500/checkpoint-4500"
+    "./ray_results/PPO_focused_ceia/"
+    "PPO_Soccer_396a8_00000_0_2026-04-16_07-55-55/checkpoint_005122/checkpoint-5122"
 )
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -142,8 +142,8 @@ if __name__ == "__main__":
             "batch_mode": "complete_episodes",
         },
         stop={
-            "timesteps_total": 60_000_000,  # checkpoint-4500 already at 21M, give 39M more
-            "time_total_s": 184200,  # 142521 (restored) + 41400 (11.5h new training)
+            "timesteps_total": 100_000_000,  # checkpoint-5122 at ~33M, give plenty of room
+            "time_total_s": 225600,  # 184242 (restored) + 41400 (11.5h new training)
         },
         checkpoint_freq=50,
         checkpoint_at_end=True,
