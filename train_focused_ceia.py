@@ -3,12 +3,10 @@ Focused training against ceia_baseline with optimized PPO hyperparameters.
 
 Strategy:
   Team 0: agents 0, 1 → always "default" (trained together)
-  Team 1: agents 2, 3 → always "opponent_ceia" (fixed ceia_baseline weights)
+  Team 1: agents 2, 3 → all mapped to ceia_baseline (100% ceia)
 
-Key changes from train_PPO_team.py:
-  1. 100% CEIA opponent (no self-play) — concentrate all gradient signal on beating ceia
-  2. PPO hyperparameter fixes — entropy, GAE lambda, grad clip, batch sizes
-  3. Simplified 2-policy setup and callback
+Uses same 4-policy structure as Frank's train_PPO_team.py for checkpoint
+compatibility, but loads ceia weights into ALL opponent slots.
 """
 import os
 import pickle
@@ -38,11 +36,11 @@ RESTORE_CHECKPOINT = (
 def policy_mapping_fn(agent_id, *args, **kwargs):
     """
     Team 0 (agents 0, 1) → "default" (being trained)
-    Team 1 (agents 2, 3) → "opponent_ceia" (fixed ceia_baseline)
+    Team 1 (agents 2, 3) → always "opponent_1" (loaded with ceia weights)
     """
     if agent_id == 0 or agent_id == 1:
         return "default"
-    return "opponent_ceia"
+    return "opponent_1"
 
 
 def _load_weights(checkpoint_path: str, policy_name: str = "default") -> dict:
@@ -57,7 +55,7 @@ def _load_weights(checkpoint_path: str, policy_name: str = "default") -> dict:
 
 
 class CEIACallback(DefaultCallbacks):
-    """Load ceia_baseline weights into opponent_ceia on first iteration."""
+    """Load ceia_baseline weights into all opponent slots on first iteration."""
 
     def __init__(self):
         super().__init__()
@@ -66,11 +64,15 @@ class CEIACallback(DefaultCallbacks):
     def on_train_result(self, **info):
         if not self._initialized:
             trainer = info["trainer"]
-            print("=== Loading ceia_baseline into opponent_ceia ===")
+            print("=== Loading ceia_baseline into all opponents ===")
             try:
                 weights = _load_weights(CEIA_CHECKPOINT)
-                trainer.set_weights({"opponent_ceia": weights})
-                print("=== opponent_ceia initialized (fixed forever) ===")
+                trainer.set_weights({
+                    "opponent_1": weights,
+                    "opponent_2": weights,
+                    "opponent_3": weights,
+                })
+                print("=== All opponents = ceia_baseline (fixed forever) ===")
             except Exception as e:
                 print(f"WARNING: failed to load ceia_baseline: {e}")
             self._initialized = True
@@ -97,11 +99,13 @@ if __name__ == "__main__":
             "framework": "torch",
             "callbacks": CEIACallback,
 
-            # ── Multiagent: 2 policies only ───────────────────────────────
+            # ── Multiagent: 4 policies (compatible with Frank's checkpoint)
             "multiagent": {
                 "policies": {
-                    "default":       (None, obs_space, act_space, {}),
-                    "opponent_ceia": (None, obs_space, act_space, {}),
+                    "default":    (None, obs_space, act_space, {}),
+                    "opponent_1": (None, obs_space, act_space, {}),
+                    "opponent_2": (None, obs_space, act_space, {}),
+                    "opponent_3": (None, obs_space, act_space, {}),
                 },
                 "policy_mapping_fn": policy_mapping_fn,
                 "policies_to_train": ["default"],
