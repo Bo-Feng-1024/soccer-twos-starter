@@ -142,8 +142,8 @@ if __name__ == "__main__":
             "batch_mode": "complete_episodes",
         },
         stop={
-            "timesteps_total": 30_000_000,
-            "time_total_s": 41400,  # 11.5h (leave 30min buffer for SBATCH 12h limit)
+            "timesteps_total": 60_000_000,  # checkpoint-4500 already at 21M, give 39M more
+            "time_total_s": 184200,  # 142521 (restored) + 41400 (11.5h new training)
         },
         checkpoint_freq=50,
         checkpoint_at_end=True,
