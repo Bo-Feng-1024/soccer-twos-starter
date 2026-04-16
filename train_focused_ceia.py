@@ -131,10 +131,10 @@ if __name__ == "__main__":
             "sgd_minibatch_size": 2048,    # was 128 — more stable gradient estimates
             "num_sgd_iter": 10,            # was 30 — less overfitting per batch
             "vf_loss_coeff": 0.5,          # was 1.0 — reduce VF dominance on shared layers
-            "lr_schedule": [               # was fixed 5e-5
-                [0, 3e-4],                 # start higher for faster progress
-                [5_000_000, 1e-4],         # decay mid-training
-                [15_000_000, 3e-5],        # fine-tune at end
+            "lr_schedule": [               # offset from checkpoint-4500 (21M steps)
+                [21_000_000, 1e-4],        # start: moderate lr for fine-tuning
+                [35_000_000, 5e-5],        # mid: standard rate
+                [50_000_000, 1e-5],        # end: fine-tune
             ],
 
             # ── Rollout ──────────────────────────────────────────────────
