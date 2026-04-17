@@ -13,10 +13,10 @@ from soccer_twos import AgentInterface
 
 
 ALGORITHM = "PPO"
-# TODO: Update this path after BC fine-tuning completes on PACE
 CHECKPOINT_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "../ray_results/PPO_bc_finetune/PLACEHOLDER/checkpoint",
+    "../ray_results/PPO_bc_finetune/"
+    "PPO_Soccer_4d85a_00000_0_2026-04-16_19-09-22/checkpoint_000500/checkpoint-500",
 )
 POLICY_NAME = "default"
 
