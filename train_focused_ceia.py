@@ -1,16 +1,17 @@
 """
-Focused training against ceia_baseline with optimized PPO hyperparameters.
+Mixed-opponent training with optimized PPO hyperparameters.
 
 Strategy:
   Team 0: agents 0, 1 → always "default" (trained together)
-  Team 1: agents 2, 3 → all mapped to ceia_baseline (100% ceia)
+  Team 1: agents 2, 3 → 70% ceia_baseline + 30% self-play snapshots
 
-Uses same 4-policy structure as Frank's train_PPO_team.py for checkpoint
-compatibility, but loads ceia weights into ALL opponent slots.
+Restores from checkpoint-5122 (87% vs ceia). Uses mixed opponents to
+prevent overfitting to ceia's specific patterns while maintaining pressure.
 """
 import os
 import pickle
 
+import numpy as np
 import ray
 from ray import tune
 from ray.rllib.agents.callbacks import DefaultCallbacks
@@ -18,6 +19,7 @@ from utils import create_rllib_env
 
 
 NUM_ENVS_PER_WORKER = 3
+OPPONENT_UPDATE_COOLDOWN = 30  # minimum iterations between selfplay updates
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 CEIA_CHECKPOINT = os.path.join(
@@ -36,11 +38,17 @@ RESTORE_CHECKPOINT = (
 def policy_mapping_fn(agent_id, *args, **kwargs):
     """
     Team 0 (agents 0, 1) → "default" (being trained)
-    Team 1 (agents 2, 3) → always "opponent_1" (loaded with ceia weights)
+    Team 1 (agents 2, 3) → sampled from opponent pool:
+      70% opponent_3 (ceia_baseline, fixed)
+      15% opponent_1 (recent self-play snapshot)
+      15% opponent_2 (older self-play snapshot)
     """
     if agent_id == 0 or agent_id == 1:
         return "default"
-    return "opponent_1"
+    return np.random.choice(
+        ["opponent_1", "opponent_2", "opponent_3"],
+        p=[0.15, 0.15, 0.70],
+    )
 
 
 def _load_weights(checkpoint_path: str, policy_name: str = "default") -> dict:
@@ -54,28 +62,44 @@ def _load_weights(checkpoint_path: str, policy_name: str = "default") -> dict:
     return {k: v for k, v in state[policy_name].items() if k != "_optimizer_variables"}
 
 
-class CEIACallback(DefaultCallbacks):
-    """Load ceia_baseline weights into all opponent slots on first iteration."""
+class MixedOpponentCallback(DefaultCallbacks):
+    """
+    First iteration: load ceia weights into opponent_3 (fixed forever).
+    Periodically: update opponent_1/2 with self-play snapshots (with cooldown).
+    """
 
     def __init__(self):
         super().__init__()
-        self._initialized = False
+        self._ceia_initialized = False
+        self._last_update_iter = 0
 
     def on_train_result(self, **info):
-        if not self._initialized:
-            trainer = info["trainer"]
-            print("=== Loading ceia_baseline into all opponents ===")
+        trainer = info["trainer"]
+
+        # Load ceia into opponent_3 on first iteration
+        if not self._ceia_initialized:
+            print("=== Loading ceia_baseline into opponent_3 (fixed) ===")
             try:
-                weights = _load_weights(CEIA_CHECKPOINT)
-                trainer.set_weights({
-                    "opponent_1": weights,
-                    "opponent_2": weights,
-                    "opponent_3": weights,
-                })
-                print("=== All opponents = ceia_baseline (fixed forever) ===")
+                ceia_weights = _load_weights(CEIA_CHECKPOINT)
+                trainer.set_weights({"opponent_3": ceia_weights})
+                print("=== opponent_3 = ceia_baseline (fixed forever) ===")
             except Exception as e:
                 print(f"WARNING: failed to load ceia_baseline: {e}")
-            self._initialized = True
+            self._ceia_initialized = True
+
+        # Update self-play snapshots with cooldown
+        current_iter = info["result"]["training_iteration"]
+        default_reward = info["result"].get("policy_reward_mean", {}).get("default", -999)
+        since_last = current_iter - self._last_update_iter
+
+        if default_reward > 0.1 and since_last >= OPPONENT_UPDATE_COOLDOWN:
+            print(f"---- Updating selfplay opponents (iter={current_iter}, reward={default_reward:.3f}) ----")
+            trainer.set_weights({
+                "opponent_2": trainer.get_weights(["opponent_1"])["opponent_1"],
+                "opponent_1": trainer.get_weights(["default"])["default"],
+                # opponent_3 intentionally NOT updated
+            })
+            self._last_update_iter = current_iter
 
 
 if __name__ == "__main__":
@@ -97,9 +121,9 @@ if __name__ == "__main__":
             "num_envs_per_worker": NUM_ENVS_PER_WORKER,
             "log_level": "INFO",
             "framework": "torch",
-            "callbacks": CEIACallback,
+            "callbacks": MixedOpponentCallback,
 
-            # ── Multiagent: 4 policies (compatible with Frank's checkpoint)
+            # ── Multiagent: 4 policies (compatible with checkpoint)
             "multiagent": {
                 "policies": {
                     "default":    (None, obs_space, act_space, {}),
@@ -122,19 +146,19 @@ if __name__ == "__main__":
                 "fcnet_activation": "relu",
             },
 
-            # ── PPO hyperparameters (fixed from defaults) ─────────────────
-            "entropy_coeff": 0.005,         # was 0.0 — prevent premature convergence
-            "lambda": 0.95,                 # was 1.0 — reduce variance with GAE
-            "grad_clip": 0.5,              # was None — prevent catastrophic updates
-            "clip_param": 0.2,             # was 0.3 — tighter PPO clipping (paper default)
-            "train_batch_size": 20000,     # was 4000 — use more collected data
-            "sgd_minibatch_size": 2048,    # was 128 — more stable gradient estimates
-            "num_sgd_iter": 10,            # was 30 — less overfitting per batch
-            "vf_loss_coeff": 0.5,          # was 1.0 — reduce VF dominance on shared layers
-            "lr_schedule": [               # offset from checkpoint-4500 (21M steps)
-                [21_000_000, 1e-4],        # start: moderate lr for fine-tuning
-                [35_000_000, 5e-5],        # mid: standard rate
-                [50_000_000, 1e-5],        # end: fine-tune
+            # ── PPO hyperparameters ──────────────────────────────────────
+            "entropy_coeff": 0.003,         # slightly lower — agent already strong, less exploration needed
+            "lambda": 0.95,
+            "grad_clip": 0.5,
+            "clip_param": 0.2,
+            "train_batch_size": 20000,
+            "sgd_minibatch_size": 2048,
+            "num_sgd_iter": 10,
+            "vf_loss_coeff": 0.5,
+            "lr_schedule": [               # checkpoint-5122 at ~33M steps
+                [33_000_000, 5e-5],        # conservative lr for fine-tuning from 87%
+                [45_000_000, 3e-5],
+                [60_000_000, 1e-5],
             ],
 
             # ── Rollout ──────────────────────────────────────────────────
@@ -142,8 +166,8 @@ if __name__ == "__main__":
             "batch_mode": "complete_episodes",
         },
         stop={
-            "timesteps_total": 100_000_000,  # checkpoint-5122 at ~33M, give plenty of room
-            "time_total_s": 225600,  # 184242 (restored) + 41400 (11.5h new training)
+            "timesteps_total": 100_000_000,
+            "time_total_s": 267000,  # ~225600 (restored) + 41400 (11.5h)
         },
         checkpoint_freq=50,
         checkpoint_at_end=True,
