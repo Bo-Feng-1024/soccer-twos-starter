@@ -6,6 +6,7 @@
 
 | # | Job ID | 日期 | Git Commit | Ray | 脚本 | 配置摘要 | 状态 | 结果 |
 |---|--------|------|-----------|-----|------|---------|------|------|
+| 14 | 4914451 | 2026-04-17 | `ed08910` | 1.4.0 | `train_focused_ceia.py` | 从 checkpoint-5122 续训，混合对手（70% ceia + 30% selfplay），entropy=0.003, lr=5e-5 | 运行中 | 待评估 |
 | 13 | 4903675 | 2026-04-16 | `460f07f` | 1.4.0 | `train_focused_ceia.py` | 从 checkpoint-5122 续训，100% ceia + 优化超参数 | 完成 | checkpoint-5749: **83%**（退化，过拟合 ceia） |
 | 12 | 4903420 | 2026-04-16 | `d1af6cb` | 1.4.0 | `train_bc_finetune.py` | BC 权重注入 + PPO fine-tuning vs 100% ceia, lr=5e-5, entropy=0.01 | 完成 | reward 0.078, 621 iter / 12.5M steps, BC 初始化未能有效对抗 ceia（distribution shift） |
 | 11 | 4903211 | 2026-04-16 | `d1af6cb` | 1.4.0 | `collect_expert_data.py` + `train_bc.py` | BC 预训练：从 checkpoint-5050 收集专家数据 + 监督学习 | 完成 | val_acc=75.7%, val_loss=0.579, 12min |
