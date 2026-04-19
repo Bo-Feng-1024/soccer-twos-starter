@@ -6,8 +6,8 @@
 
 | # | Job ID | 日期 | Git Commit | Ray | 脚本 | 配置摘要 | 状态 | 结果 |
 |---|--------|------|-----------|-----|------|---------|------|------|
-| 18 | TBD | 2026-04-19 | TBD | 1.4.0 | `train_experiment_d.py` | 分离 policy/value 网络 (vf_share=False), vf_loss=1.0, 从零训练 | 待提交 | — |
-| 17 | TBD | 2026-04-19 | TBD | 1.4.0 | `train_experiment_c.py` | Reward 微调（kick 2x, offensive 2x, defensive 0.5x, 去 time penalty），从 checkpoint-5122 | 待提交 | — |
+| 18 | 5015762 | 2026-04-19 | `2c4c330` | 1.4.0 | `train_experiment_d.py` | 分离 policy/value 网络 (vf_share=False), vf_loss=1.0, 从零训练 | 运行中 | — |
+| 17 | 5015761 | 2026-04-19 | `2c4c330` | 1.4.0 | `train_experiment_c.py` | Reward 微调（kick 2x, offensive 2x, defensive 0.5x, 去 time penalty），从 checkpoint-5122 | 运行中 | — |
 | 16 | 4955780 | 2026-04-18 | `2c48a51` | 1.4.0 | `train_experiment_b.py` | [512,512] 网络 + 近默认超参数，从零训练，50% ceia + 50% selfplay | 完成 | checkpoint-591: **6%**（训练不足，591 轮 vs 需要 5000+） |
 | 15 | 4955779 | 2026-04-18 | `2c48a51` | 1.4.0 | `train_experiment_a.py` | 从 checkpoint-5122 续训，entropy=0.01, lr=1e-4, 60% ceia + 40% selfplay | 完成 | checkpoint-5650: **84%**（高 entropy 导致退化） |
 | 14 | 4914451 | 2026-04-17 | `ed08910` | 1.4.0 | `train_focused_ceia.py` | 从 checkpoint-5122 续训，混合对手（70% ceia + 30% selfplay），entropy=0.003, lr=5e-5 | 完成 | checkpoint-5750: **86%**（防止退化但未突破 87%） |

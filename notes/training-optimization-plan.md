@@ -1,6 +1,43 @@
 # 训练优化计划：68% → 90% vs CEIA Baseline
 
-## Context
+## 当前状态（2026-04-19）
+
+**最佳模型**：checkpoint-5122，**87% 胜率** vs ceia_baseline（100 局评估）
+
+### 已尝试的策略和结果
+
+| # | 策略 | 结果 | 结论 |
+|---|------|------|------|
+| 1 | PPO 超参数优化（entropy, GAE, grad_clip 等）+ 100% ceia | checkpoint-4650: 80%, checkpoint-5122: **87%** | 有效，从 68% → 87% |
+| 2 | 继续 100% ceia 训练 | checkpoint-5749: 83% | 过拟合退化 |
+| 3 | 70% ceia + 30% selfplay | checkpoint-5750: 86% | 防止退化但未突破 |
+| 4 | BC 预训练 + PPO fine-tune | reward 0.078 | 完全失败（distribution shift） |
+| 5 | 高 entropy (0.01) + 高 lr (1e-4) | checkpoint-5650: 84% | 退化 |
+| 6 | [512,512] 大网络从零训练 | checkpoint-591: 6% | 训练不足 |
+
+### 正在进行的实验
+
+| # | 策略 | 假设 |
+|---|------|------|
+| C | Reward 权重微调（kick 2x, offensive 2x, defensive 0.5x, 去 time penalty） | 默认 reward 权重在高水平对抗中次优 |
+| D | 分离 policy/value 网络（vf_share_layers=False） | 共享网络的 VF loss 干扰 policy gradient |
+
+### 未尝试的方向
+
+- Observation normalization（running mean-variance）
+- 续训 [512,512] 多轮（实验 B 只跑了 591 轮，reward 趋势良好）
+- Orthogonal initialization
+- Adam epsilon = 1e-5
+
+---
+
+## 原始计划（2026-04-14）
+
+以下是最初的优化计划，已大部分执行完毕。保留作为参考。
+
+---
+
+## Context（原始）
 
 当前最强 checkpoint-2429（`train_PPO_team.py`，50% ceia 对打）vs ceia_baseline 胜率 68%，目标 90%。训练历史显示严重不稳定（62% → 15% → 56% → 68%）。
 
