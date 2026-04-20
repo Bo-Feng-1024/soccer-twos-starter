@@ -27,8 +27,10 @@ CEIA_CHECKPOINT = os.path.join(
     "PPO_Soccer_f475e_00000_0_2021-09-19_15-54-02/checkpoint_002449/checkpoint-2449",
 )
 
-# Not restoring — separate networks incompatible with shared checkpoint
-RESTORE_CHECKPOINT = None
+RESTORE_CHECKPOINT = (
+    "./ray_results/PPO_exp_d/"
+    "PPO_Soccer_63f11_00000_0_2026-04-19_13-37-09/checkpoint_000555/checkpoint-555"
+)
 
 
 def policy_mapping_fn(agent_id, *args, **kwargs):
@@ -136,13 +138,13 @@ if __name__ == "__main__":
             "batch_mode": "complete_episodes",
         },
         stop={
-            "timesteps_total": 30_000_000,
-            "time_total_s": 41400,  # 11.5h
+            "timesteps_total": 60_000_000,
+            "time_total_s": 82800,  # 41400 (restored) + 41400 (11.5h new)
         },
         checkpoint_freq=50,
         checkpoint_at_end=True,
         local_dir="./ray_results",
-        # NO restore — architecture change
+        **({"restore": RESTORE_CHECKPOINT} if RESTORE_CHECKPOINT else {}),
     )
 
     best_trial = analysis.get_best_trial("episode_reward_mean", mode="max")
