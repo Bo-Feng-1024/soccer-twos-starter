@@ -7,10 +7,10 @@
 | # | Job ID | 日期 | Git Commit | Ray | 脚本 | 配置摘要 | 状态 | 结果 |
 |---|--------|------|-----------|-----|------|---------|------|------|
 | 18 | 5015762 | 2026-04-19 | `2c4c330` | 1.4.0 | `train_experiment_d.py` | 分离 policy/value 网络 (vf_share=False), vf_loss=1.0, 从零训练 | 完成 | checkpoint-555: 训练不足（555 轮），未评估 |
-| 23 | TBD | 2026-04-21 | TBD | 1.4.0 | `train_experiment_h.py` | 强防守 reward（3x defensive penalty + goalie positioning），从 checkpoint-5122 | 待提交 | — |
+| 23 | 5030847 | 2026-04-21 | `66a53e2` | 1.4.0 | `train_experiment_h.py` | 强防守 reward（3x defensive penalty + goalie positioning），从 checkpoint-5122 | 运行中 | 前两次（5030577, 5030789）因端口占用失败，排除节点重提交 |
 | — | anal | 2026-04-21 | — | — | analyze_losses.py | 输球模式分析：输球 avg 24.5 步 vs 赢球 41.0 步，被快速进球 | 完成 | 防守漏洞是主要输球原因 |
 | 22 | 5022630 | 2026-04-20 | `4f9e20e` | 1.4.0 | `train_experiment_g.py` | 默认超参数 + 从 checkpoint-5122 续训，grad_clip=0.5 | 完成 | checkpoint-6600: **75%**（严重退化，blue 88% vs orange 62% 不对称） |
-| 21 | 5022518 | 2026-04-19 | `4f40a3a` | 1.4.0 | `train_experiment_d.py` | 续训实验 D（分离网络 vf_share=False），从 checkpoint-555 继续 | 完成 | 未产生新 checkpoint（仍是 555），reward 0.15-0.16 |
+| 21 | 5022518 | 2026-04-19 | `4f40a3a` | 1.4.0 | `train_experiment_d.py` | 续训实验 D（分离网络 vf_share=False），从 checkpoint-555 继续 | 完成 | checkpoint-1122（新目录 29b63），reward 0.15-0.16，待评估 |
 | 20 | 5022442 | 2026-04-19 | `1302de0` | 1.4.0 | `train_experiment_f.py` | MeanStdFilter + 从零训练，50% ceia + 50% selfplay | 完成 | checkpoint-593, reward 0.075（MeanStdFilter 从零训练太慢） |
 | 19 | 5022441 | 2026-04-19 | `1302de0` | 1.4.0 | `train_experiment_e.py` | MeanStdFilter + 从 checkpoint-5122 续训，70% ceia | 失败 | NoFilter/MeanStdFilter 不兼容，restore 时 filter sync 报错 |
 | — | eval | 2026-04-21 | — | — | 500 局评估 checkpoint-5050 | 扫描中间 checkpoint | 完成 | **81.4%**（407/500） |
