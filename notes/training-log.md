@@ -10,6 +10,8 @@
 | 23 | 5030847 | 2026-04-21 | `66a53e2` | 1.4.0 | `train_experiment_h.py` | 强防守 reward（3x defensive penalty + goalie positioning），从 checkpoint-5122 | 运行中 | 前两次（5030577, 5030789）因端口占用失败，排除节点重提交 |
 | — | anal | 2026-04-21 | — | — | analyze_losses.py | 输球模式分析：输球 avg 24.5 步 vs 赢球 41.0 步，被快速进球 | 完成 | 防守漏洞是主要输球原因 |
 | 22 | 5022630 | 2026-04-20 | `4f9e20e` | 1.4.0 | `train_experiment_g.py` | 默认超参数 + 从 checkpoint-5122 续训，grad_clip=0.5 | 完成 | checkpoint-6600: **75%**（严重退化，blue 88% vs orange 62% 不对称） |
+| 25 | 5031679 | 2026-04-21 | `a72ab3d` | 1.4.0 | `train_experiment_d.py` | 续训实验 D（分离网络），从 checkpoint-1122，排除问题节点 | 运行中 | — |
+| 24 | 5031584 | 2026-04-21 | `a72ab3d` | 1.4.0 | `train_experiment_d.py` | 续训实验 D（分离网络），从 checkpoint-1122 继续 | 失败 | 端口占用（Address already in use），walltime 仅 2min |
 | 21 | 5022518 | 2026-04-19 | `4f40a3a` | 1.4.0 | `train_experiment_d.py` | 续训实验 D（分离网络 vf_share=False），从 checkpoint-555 继续 | 完成 | checkpoint-1122（新目录 29b63），reward 0.15-0.16，待评估 |
 | 20 | 5022442 | 2026-04-19 | `1302de0` | 1.4.0 | `train_experiment_f.py` | MeanStdFilter + 从零训练，50% ceia + 50% selfplay | 完成 | checkpoint-593, reward 0.075（MeanStdFilter 从零训练太慢） |
 | 19 | 5022441 | 2026-04-19 | `1302de0` | 1.4.0 | `train_experiment_e.py` | MeanStdFilter + 从 checkpoint-5122 续训，70% ceia | 失败 | NoFilter/MeanStdFilter 不兼容，restore 时 filter sync 报错 |
@@ -48,6 +50,7 @@
 | restore 后 policy 数不匹配 | checkpoint 有 4 个 policy，脚本只定义 2 个 | 保持 4 policy 结构，全部加载 ceia 权重 | #7 |
 | restore 后 stop 条件立即满足 | checkpoint 的 time_total_s=142521 已超 41400 | 增大 stop 到 184200s / 60M steps | #8 |
 | lr_schedule 基于绝对 timesteps | checkpoint 恢复后 timesteps=21M，超过 schedule 最后节点 15M，lr 锁在 3e-5 | schedule 从 21M 开始设置 | #9 |
+| 端口占用反复出现（4次） | 失败 job 或交互式 session 的 Unity 进程残留在节点上 | **每次 sbatch 必须加 `--exclude`**，排除所有正在用和最近失败的节点 | #23(x2), #24 |
 
 ## 如何添加新记录
 
