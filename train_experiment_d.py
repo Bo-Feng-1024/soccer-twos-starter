@@ -1,12 +1,11 @@
 """
-Experiment D: Separate policy and value networks + from checkpoint-5122 (87%).
+Experiment D (v3): Separate networks + self-play dominant (Brandão-inspired).
 
-Hypothesis: vf_share_layers=True causes VF loss to interfere with policy gradient.
-PPO best practices (37 Implementation Details) recommend separate networks.
-
-Note: Changing vf_share_layers from True to False changes the model architecture,
-so we can't directly restore weights. Instead we restore and let Ray handle the
-mismatch — it will keep compatible weights and reinitialize incompatible ones.
+Continues from checkpoint-1700 (78%) with updated strategy:
+  - Opponent ratio reversed: 70% self-play + 30% ceia (was 70% ceia)
+  - lr = 3e-4 (was 1e-4, paper uses 4e-4)
+  - num_sgd_iter = 5 (was 10, paper uses 5)
+  - Keeps vf_share_layers=False + vf_loss_coeff=1.0 (separate networks)
 """
 import os
 import pickle
@@ -19,7 +18,7 @@ from utils import create_rllib_env
 
 
 NUM_ENVS_PER_WORKER = 3
-OPPONENT_UPDATE_COOLDOWN = 30
+OPPONENT_UPDATE_COOLDOWN = 20  # was 30 — faster self-play progression
 
 CEIA_CHECKPOINT = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -29,7 +28,7 @@ CEIA_CHECKPOINT = os.path.join(
 
 RESTORE_CHECKPOINT = (
     "./ray_results/PPO_exp_d/"
-    "PPO_Soccer_29b63_00000_0_2026-04-20_11-54-07/checkpoint_001122/checkpoint-1122"
+    "PPO_Soccer_6047f_00000_0_2026-04-21_13-41-50/checkpoint_001700/checkpoint-1700"
 )
 
 
@@ -38,7 +37,7 @@ def policy_mapping_fn(agent_id, *args, **kwargs):
         return "default"
     return np.random.choice(
         ["opponent_1", "opponent_2", "opponent_3"],
-        p=[0.15, 0.15, 0.70],  # 70% ceia
+        p=[0.35, 0.35, 0.30],  # 70% self-play + 30% ceia (Brandão)
     )
 
 
@@ -119,27 +118,26 @@ if __name__ == "__main__":
                 "fcnet_hiddens": [256, 256],
                 "fcnet_activation": "relu",
             },
-            # PPO hyperparameters — same as best run (#10) but vf_loss_coeff=1.0
-            # since separate networks don't have the VF-domination problem
+            # PPO hyperparameters — Brandão-inspired + separate networks
             "entropy_coeff": 0.005,
             "lambda": 0.95,
             "grad_clip": 0.5,
             "clip_param": 0.2,
             "train_batch_size": 20000,
             "sgd_minibatch_size": 2048,
-            "num_sgd_iter": 10,
-            "vf_loss_coeff": 1.0,              # was 0.5 — safe with separate networks
+            "num_sgd_iter": 5,                 # was 10 — paper uses 5
+            "vf_loss_coeff": 1.0,              # safe with separate networks
             "lr_schedule": [
-                [0, 1e-4],
-                [15_000_000, 5e-5],
-                [30_000_000, 1e-5],
+                [34_000_000, 3e-4],            # higher lr (paper uses 4e-4)
+                [50_000_000, 1e-4],
+                [80_000_000, 5e-5],
             ],
             "rollout_fragment_length": 1000,
             "batch_mode": "complete_episodes",
         },
         stop={
             "timesteps_total": 100_000_000,
-            "time_total_s": 165600,  # 82800 (restored) + 82800 (two more 11.5h rounds)
+            "time_total_s": 300000,        # generous — will hit 12h wall time first
         },
         checkpoint_freq=50,
         checkpoint_at_end=True,
