@@ -38,9 +38,11 @@ CEIA_CHECKPOINT = os.path.join(
 )
 
 # Old checkpoint for weight injection (NOT restore — different obs dim)
-OLD_CHECKPOINT = (
-    "./ray_results/PPO_focused_ceia/"
-    "PPO_Soccer_396a8_00000_0_2026-04-16_07-55-55/checkpoint_005122/checkpoint-5122"
+# Must use absolute path — Ray trainer runs from different working directory
+OLD_CHECKPOINT = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "ray_results/PPO_focused_ceia/"
+    "PPO_Soccer_396a8_00000_0_2026-04-16_07-55-55/checkpoint_005122/checkpoint-5122",
 )
 
 
@@ -123,11 +125,29 @@ class FrameStackCallback(DefaultCallbacks):
             self._weights_injected = True
 
         if not self._ceia_initialized:
-            print("=== Loading ceia_baseline into opponent_3 (fixed) ===")
+            print("=== Loading ceia_baseline into opponent_3 (with shape adaptation) ===")
             try:
                 ceia_weights = _load_weights(CEIA_CHECKPOINT)
-                trainer.set_weights({"opponent_3": ceia_weights})
-                print("=== opponent_3 = ceia_baseline (fixed forever) ===")
+                # ceia weights are 336-dim, opponent_3 expects 1344-dim (frame-stacked)
+                # Apply same shape adaptation as _inject_weights
+                new_weights = trainer.get_weights(["opponent_3"])["opponent_3"]
+                adapted = {}
+                for key in new_weights:
+                    if key in ceia_weights:
+                        old_val = np.array(ceia_weights[key])
+                        new_val = np.array(new_weights[key])
+                        if old_val.shape == new_val.shape:
+                            adapted[key] = ceia_weights[key]
+                        elif len(old_val.shape) == 2 and len(new_val.shape) == 2:
+                            result = np.zeros_like(new_val)
+                            result[:, -old_val.shape[1]:] = old_val
+                            adapted[key] = result
+                        else:
+                            adapted[key] = new_weights[key]
+                    else:
+                        adapted[key] = new_weights[key]
+                trainer.set_weights({"opponent_3": adapted})
+                print("=== opponent_3 = ceia_baseline (adapted to frame-stacked, fixed forever) ===")
             except Exception as e:
                 print(f"WARNING: failed to load ceia_baseline: {e}")
             self._ceia_initialized = True
