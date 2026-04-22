@@ -10,7 +10,7 @@
 | 23 | 5030847 | 2026-04-21 | `66a53e2` | 1.4.0 | `train_experiment_h.py` | 强防守 reward（3x defensive penalty + goalie positioning），从 checkpoint-5122 | 完成（超时） | iter 5754, reward 0.098, 46.5M steps, 12h 时间限制到期，待查 checkpoint 并评估 |
 | — | anal | 2026-04-21 | — | — | analyze_losses.py | 输球模式分析：输球 avg 24.5 步 vs 赢球 41.0 步，被快速进球 | 完成 | 防守漏洞是主要输球原因 |
 | 22 | 5022630 | 2026-04-20 | `4f9e20e` | 1.4.0 | `train_experiment_g.py` | 默认超参数 + 从 checkpoint-5122 续训，grad_clip=0.5 | 完成 | checkpoint-6600: **75%**（严重退化，blue 88% vs orange 62% 不对称） |
-| 25 | 5031679 | 2026-04-21 | `a72ab3d` | 1.4.0 | `train_experiment_d.py` | 续训实验 D（分离网络），从 checkpoint-1122，排除问题节点 | 运行中 | — |
+| 25 | 5031679 | 2026-04-21 | `a72ab3d` | 1.4.0 | `train_experiment_d.py` | 续训实验 D（分离网络），从 checkpoint-1122，排除问题节点 | 完成（超时） | iter 1706, reward 0.162, 34.6M steps, 12h 时间限制到期，待查 checkpoint 并评估 |
 | 24 | 5031584 | 2026-04-21 | `a72ab3d` | 1.4.0 | `train_experiment_d.py` | 续训实验 D（分离网络），从 checkpoint-1122 继续 | 失败 | 端口占用（Address already in use），walltime 仅 2min |
 | 21 | 5022518 | 2026-04-19 | `4f40a3a` | 1.4.0 | `train_experiment_d.py` | 续训实验 D（分离网络 vf_share=False），从 checkpoint-555 继续 | 完成 | checkpoint-1122（新目录 29b63），reward 0.15-0.16，待评估 |
 | 20 | 5022442 | 2026-04-19 | `1302de0` | 1.4.0 | `train_experiment_f.py` | MeanStdFilter + 从零训练，50% ceia + 50% selfplay | 完成 | checkpoint-593, reward 0.075（MeanStdFilter 从零训练太慢） |
