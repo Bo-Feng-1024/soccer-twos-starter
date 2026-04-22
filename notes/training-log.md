@@ -6,6 +6,7 @@
 
 | # | Job ID | 日期 | Git Commit | Ray | 脚本 | 配置摘要 | 状态 | 结果 |
 |---|--------|------|-----------|-----|------|---------|------|------|
+| 28 | 5038579 | 2026-04-22 | `70be782` | 1.4.0 | `train_experiment_d.py` | 实验 D v3：分离网络 + self-play 70% + lr=3e-4，从 checkpoint-1700 续训 | 运行中 | — |
 | 27 | 5037897 | 2026-04-22 | `ee63f03` | 1.4.0 | `train_experiment_j.py` | 4帧堆叠 + 权重注入 from checkpoint-5122 + self-play 70%，从零训练（基于 Brandão 2022） | 运行中 | — |
 | 26 | 5037675 | 2026-04-22 | `e4f9286` | 1.4.0 | `train_experiment_i.py` | Self-play 为主 (30% ceia + 70% selfplay)，lr=3e-4，5 epochs，从 checkpoint-5122（基于 Brandão 2022） | 运行中 | — |
 | 18 | 5015762 | 2026-04-19 | `2c4c330` | 1.4.0 | `train_experiment_d.py` | 分离 policy/value 网络 (vf_share=False), vf_loss=1.0, 从零训练 | 完成 | checkpoint-555: 训练不足（555 轮），未评估 |
