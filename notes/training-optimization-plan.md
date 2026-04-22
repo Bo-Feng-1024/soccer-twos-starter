@@ -1,42 +1,57 @@
 # 训练优化计划：68% → 90% vs CEIA Baseline
 
-## 当前状态（2026-04-21）
+## 当前状态（2026-04-22）
 
-**最佳模型**：checkpoint-5050，**81.4% 胜率** vs ceia_baseline（500 局评估）；checkpoint-5122 为 **83%**（500 局）
+**最佳模型**：checkpoint-5122，**83% 胜率** vs ceia_baseline（500 局评估）
 
-### 关键发现：CEIA Baseline 是确定性策略
+### 关键发现
 
-老师确认 ceia_baseline_agent 使用**确定性策略**（给定相同 observation，永远做相同动作）。这意味着：
-- 理论上限是 **100% 胜率**，87% 不是天花板
-- 每次输球都是 agent 自身策略不够好，不是对手"运气好"
-- Baseline 的进攻模式是固定的 — agent 只需学会识别并应对这几种固定套路
-- **防守优化**是突破口：输球分析显示被快速进球（avg 24.5 步），这些进攻模式是可被完全预测和防御的
-- 更多针对 ceia 的训练是正确方向，但需保持 entropy 防止策略坍缩
+**1. CEIA Baseline 是确定性策略**（老师确认）
+- 理论上限 100% 胜率，每次输球都是 agent 自身策略不够好
+- Baseline 进攻模式固定，可被完全预测和防御
+
+**2. Brandão 2022 论文核心结论：Self-Play >> 固定对手训练**
+- 论文：只训练 vs 固定 heuristic 的模型**始终无法提升**（Fig 6-8），而 self-play 从零逐步提升到 93%
+- **这解释了我们所有从 checkpoint-5122 续训的退化** — 高比例 ceia 训练导致无法探索新策略
+- Self-play 创造自动课程学习：对手随 agent 水平递增
+- 论文训练了 320M 步才收敛，我们最多只跑了 46M
+
+**3. 论文的其他关键设计**
+- 帧堆叠 8 帧（获取速度/方向信息）
+- lr=0.0004 固定（不衰减）
+- 5 epochs（非 10）
+- 分离 policy/value 网络
+- 进球 reward 按时间加权（早进球奖励更高）
 
 ### 已尝试的策略和结果
 
 | # | 策略 | 结果 | 结论 |
 |---|------|------|------|
-| 1 | PPO 超参数优化（entropy, GAE, grad_clip 等）+ 100% ceia | checkpoint-4650: 80%, checkpoint-5122: **87%** | 有效，从 68% → 87% |
+| 1 | PPO 超参数优化 + 100% ceia | checkpoint-5122: **83%** (500局) | 有效，68%→83%，但到天花板 |
 | 2 | 继续 100% ceia 训练 | checkpoint-5749: 83% | 过拟合退化 |
-| 3 | 70% ceia + 30% selfplay | checkpoint-5750: 86% | 防止退化但未突破 |
+| 3 | 70% ceia + 30% selfplay | checkpoint-5750: 86% (100局) | 防止退化但未突破 |
 | 4 | BC 预训练 + PPO fine-tune | reward 0.078 | 完全失败（distribution shift） |
-| 5 | 高 entropy (0.01) + 高 lr (1e-4) | checkpoint-5650: 84% | 退化 |
+| 5 | 高 entropy (0.01) + 高 lr (1e-4) | checkpoint-5650: 84% (100局) | 退化 |
 | 6 | [512,512] 大网络从零训练 | checkpoint-591: 6% | 训练不足 |
+| 7 | Reward 微调 (exp C) | checkpoint-5750: 84% (100局) | 轻微改善但未突破 |
+| 8 | 分离网络 (exp D) | checkpoint-1700: 78% | 训练不足（1700 轮 vs 需 5000+） |
+| 9 | 默认超参数续训 (exp G) | checkpoint-6600: 75% | 严重退化 |
+| 10 | 强防守 reward (exp H) | checkpoint-5750: 80% | 防守 reward 过于保守 |
+| 11 | MeanStdFilter 续训 | — | 失败（NoFilter 不兼容） |
+| 12 | MeanStdFilter 从零训练 | checkpoint-593: reward 0.075 | 太慢 |
 
-### 正在进行的实验
+### 下一步计划（基于论文）
 
-| # | 策略 | 假设 |
-|---|------|------|
-| C | Reward 权重微调（kick 2x, offensive 2x, defensive 0.5x, 去 time penalty） | 默认 reward 权重在高水平对抗中次优 |
-| D | 分离 policy/value 网络（vf_share_layers=False） | 共享网络的 VF loss 干扰 policy gradient |
+| 实验 | 核心改动 | 起点 | 假设 |
+|------|---------|------|------|
+| **I（优先）** | 反转对手比例 (30% ceia + 70% selfplay)、lr=3e-4、5 epochs | checkpoint-5122 | 论文核心发现：self-play 为主才能突破 |
+| **J（后续）** | 帧堆叠 (4帧) + self-play + 更大网络 | 从零训练 | 帧堆叠提供时间信息，改善防守反应 |
 
-### 未尝试的方向
+### 已排除的方向
 
-- Observation normalization（running mean-variance）
-- 续训 [512,512] 多轮（实验 B 只跑了 591 轮，reward 趋势良好）
-- Orthogonal initialization
-- Adam epsilon = 1e-5
+- Observation normalization（MeanStdFilter）— obs 已在 [0,1]，不兼容 restore
+- 100% ceia 训练 — 论文证明固定对手训练无法突破
+- 默认超参数 — 实测严重退化
 
 ---
 
