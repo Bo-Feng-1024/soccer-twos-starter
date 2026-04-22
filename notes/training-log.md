@@ -7,7 +7,8 @@
 | # | Job ID | 日期 | Git Commit | Ray | 脚本 | 配置摘要 | 状态 | 结果 |
 |---|--------|------|-----------|-----|------|---------|------|------|
 | 28 | 5038579 | 2026-04-22 | `70be782` | 1.4.0 | `train_experiment_d.py` | 实验 D v3：分离网络 + self-play 70% + lr=3e-4，从 checkpoint-1700 续训 | 运行中 | — |
-| 27 | 5037897 | 2026-04-22 | `ee63f03` | 1.4.0 | `train_experiment_j.py` | 4帧堆叠 + 权重注入 from checkpoint-5122 + self-play 70%，从零训练（基于 Brandão 2022） | 运行中 | — |
+| 29 | 5038807 | 2026-04-22 | `dc04f67` | 1.4.0 | `train_experiment_j.py` | 4帧堆叠 + 权重注入（修复路径+ceia shape适配），self-play 70% | 运行中 | — |
+| 27 | 5037897 | 2026-04-22 | `ee63f03` | 1.4.0 | `train_experiment_j.py` | 4帧堆叠 + 权重注入 + self-play 70% | 失败 | 权重注入失败（相对路径）+ ceia shape 不匹配，等于从零随机训练，已取消 |
 | 26 | 5037675 | 2026-04-22 | `e4f9286` | 1.4.0 | `train_experiment_i.py` | Self-play 为主 (30% ceia + 70% selfplay)，lr=3e-4，5 epochs，从 checkpoint-5122（基于 Brandão 2022） | 运行中 | — |
 | 18 | 5015762 | 2026-04-19 | `2c4c330` | 1.4.0 | `train_experiment_d.py` | 分离 policy/value 网络 (vf_share=False), vf_loss=1.0, 从零训练 | 完成 | checkpoint-555: 训练不足（555 轮），未评估 |
 | 23 | 5030847 | 2026-04-21 | `66a53e2` | 1.4.0 | `train_experiment_h.py` | 强防守 reward（3x defensive penalty + goalie positioning），从 checkpoint-5122 | 完成（超时） | checkpoint-5750: **80%**（退化，防守 reward 过于保守） |
