@@ -1,20 +1,11 @@
 """
-League-style selfplay training against ceia_baseline.
+Experiment D (v3): Separate networks + self-play dominant (Brandão-inspired).
 
-Team structure (2v2):
-  Team 0: agent_id 0, 1 → always "default"  (your team, trained together)
-  Team 1: agent_id 2, 3 → sampled from opponent pool  (never trained)
-
-Opponent pool:
-  opponent_1: rolling selfplay snapshot (most recent)
-  opponent_2: rolling selfplay snapshot (older)
-  opponent_3: FIXED ceia_baseline weights (never updated)
-
-Opponent update rule:
-  When policy_reward_mean/default > OPPONENT_UPDATE_THRESHOLD, shift the rolling snapshots:
-    opponent_2 ← opponent_1
-    opponent_1 ← default
-  opponent_3 stays as ceia_baseline forever.
+Continues from checkpoint-1700 (78%) with updated strategy:
+  - Opponent ratio reversed: 70% self-play + 30% ceia (was 70% ceia)
+  - lr = 3e-4 (was 1e-4, paper uses 4e-4)
+  - num_sgd_iter = 5 (was 10, paper uses 5)
+  - Keeps vf_share_layers=False + vf_loss_coeff=1.0 (separate networks)
 """
 import os
 import pickle
@@ -27,10 +18,8 @@ from utils import create_rllib_env
 
 
 NUM_ENVS_PER_WORKER = 3
-OPPONENT_UPDATE_THRESHOLD = 0.25
-OPPONENT_UPDATE_COOLDOWN = 100  # minimum iterations between updates
+OPPONENT_UPDATE_COOLDOWN = 20  # was 30 — faster self-play progression
 
-# ── Paths (relative to project root; adjust if needed) ───────────────────────
 CEIA_CHECKPOINT = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "ceia_baseline_agent/ray_results/PPO_selfplay_twos/"
@@ -38,27 +27,21 @@ CEIA_CHECKPOINT = os.path.join(
 )
 
 RESTORE_CHECKPOINT = (
-    "./ray_results/PPO_team/"
-    "PPO_Soccer_8bb43_00000_0_2026-04-22_12-58-54/checkpoint_016500/checkpoint-16500"
+    "./ray_results/PPO_exp_d/"
+    "PPO_Soccer_6047f_00000_0_2026-04-21_13-41-50/checkpoint_001700/checkpoint-1700"
 )
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 def policy_mapping_fn(agent_id, *args, **kwargs):
-    """
-    Team 0 (agents 0, 1) always use the policy being trained ("default").
-    Team 1 (agents 2, 3) sample from the fixed opponent pool.
-    """
     if agent_id == 0 or agent_id == 1:
         return "default"
     return np.random.choice(
         ["opponent_1", "opponent_2", "opponent_3"],
-        p=[0.00, 0.00, 1.00]  # 100% ceia, no self-play
+        p=[0.35, 0.35, 0.30],  # 70% self-play + 30% ceia (Brandão)
     )
 
 
-def _load_weights(checkpoint_path: str, policy_name: str = "default") -> dict:
-    """Extract policy weights from a Ray checkpoint file."""
+def _load_weights(checkpoint_path, policy_name="default"):
     with open(checkpoint_path, "rb") as f:
         data = pickle.load(f)
     worker_state = pickle.loads(data["worker"])
@@ -68,38 +51,32 @@ def _load_weights(checkpoint_path: str, policy_name: str = "default") -> dict:
     return {k: v for k, v in state[policy_name].items() if k != "_optimizer_variables"}
 
 
-class LeagueCallback(DefaultCallbacks):
+class MixedOpponentCallback(DefaultCallbacks):
     def __init__(self):
         super().__init__()
         self._ceia_initialized = False
-        self._last_update_iter = -OPPONENT_UPDATE_COOLDOWN
+        self._last_update_iter = 0
 
     def on_train_result(self, **info):
         trainer = info["trainer"]
-
-        # On the very first iteration: load ceia_baseline into opponent_3
         if not self._ceia_initialized:
-            print("=== Loading ceia_baseline into opponent_3 ===")
+            print("=== Loading ceia_baseline into opponent_3 (fixed) ===")
             try:
-                weights = _load_weights(CEIA_CHECKPOINT)
-                trainer.set_weights({"opponent_3": weights})
+                ceia_weights = _load_weights(CEIA_CHECKPOINT)
+                trainer.set_weights({"opponent_3": ceia_weights})
                 print("=== opponent_3 = ceia_baseline (fixed forever) ===")
             except Exception as e:
                 print(f"WARNING: failed to load ceia_baseline: {e}")
             self._ceia_initialized = True
 
-        # Shift rolling selfplay snapshots when default is winning enough
-        # Cooldown prevents cluster updates from reducing opponent diversity
         current_iter = info["result"]["training_iteration"]
         default_reward = info["result"].get("policy_reward_mean", {}).get("default", -999)
         since_last = current_iter - self._last_update_iter
-
-        if default_reward > OPPONENT_UPDATE_THRESHOLD and since_last >= OPPONENT_UPDATE_COOLDOWN:
-            print(f"---- Promoting opponents (default_reward={default_reward:.3f}, gap={since_last}) ----")
+        if default_reward > 0.1 and since_last >= OPPONENT_UPDATE_COOLDOWN:
+            print(f"---- Updating selfplay opponents (iter={current_iter}, reward={default_reward:.3f}) ----")
             trainer.set_weights({
                 "opponent_2": trainer.get_weights(["opponent_1"])["opponent_1"],
                 "opponent_1": trainer.get_weights(["default"])["default"],
-                # opponent_3 intentionally skipped
             })
             self._last_update_iter = current_iter
 
@@ -115,14 +92,14 @@ if __name__ == "__main__":
 
     analysis = tune.run(
         "PPO",
-        name="PPO_team",
+        name="PPO_exp_d",
         config={
             "num_gpus": 0,
             "num_workers": 7,
             "num_envs_per_worker": NUM_ENVS_PER_WORKER,
             "log_level": "INFO",
             "framework": "torch",
-            "callbacks": LeagueCallback,
+            "callbacks": MixedOpponentCallback,
             "multiagent": {
                 "policies": {
                     "default":    (None, obs_space, act_space, {}),
@@ -135,33 +112,41 @@ if __name__ == "__main__":
             },
             "env": "Soccer",
             "env_config": {"num_envs_per_worker": NUM_ENVS_PER_WORKER},
+            # ── Key change: separate policy and value networks ───────────
             "model": {
-                "vf_share_layers": True,
+                "vf_share_layers": False,       # was True — separate networks
                 "fcnet_hiddens": [256, 256],
                 "fcnet_activation": "relu",
             },
-            "clip_param": 0.2,          # standard PPO (default 0.3 too aggressive)
-            "lambda": 0.95,             # GAE (default 1.0 = high variance MC)
-            "lr": 3e-4,                 # Unity Soccer recommended (default 5e-5 too slow)
-            "vf_loss_coeff": 0.5,       # reduce VF interference (vf_share_layers=True)
-            "entropy_coeff": 0.005,     # Unity Soccer recommended beta
-            "rollout_fragment_length": 5000,
+            # PPO hyperparameters — Brandão-inspired + separate networks
+            "entropy_coeff": 0.005,
+            "lambda": 0.95,
+            "grad_clip": 0.5,
+            "clip_param": 0.2,
+            "train_batch_size": 20000,
+            "sgd_minibatch_size": 2048,
+            "num_sgd_iter": 5,                 # was 10 — paper uses 5
+            "vf_loss_coeff": 1.0,              # safe with separate networks
+            "lr_schedule": [
+                [34_000_000, 3e-4],            # higher lr (paper uses 4e-4)
+                [50_000_000, 1e-4],
+                [80_000_000, 5e-5],
+            ],
+            "rollout_fragment_length": 1000,
             "batch_mode": "complete_episodes",
         },
         stop={
-            "timesteps_total": 120000000,
-            "time_total_s": 5184000,   # 1440 h
+            "timesteps_total": 100_000_000,
+            "time_total_s": 300000,        # generous — will hit 12h wall time first
         },
-        checkpoint_freq=100,
+        checkpoint_freq=50,
         checkpoint_at_end=True,
         local_dir="./ray_results",
-        restore=RESTORE_CHECKPOINT,
+        **({"restore": RESTORE_CHECKPOINT} if RESTORE_CHECKPOINT else {}),
     )
 
     best_trial = analysis.get_best_trial("episode_reward_mean", mode="max")
-    best_ckpt = analysis.get_best_checkpoint(
-        trial=best_trial, metric="episode_reward_mean", mode="max"
-    )
+    best_ckpt = analysis.get_best_checkpoint(trial=best_trial, metric="episode_reward_mean", mode="max")
     print(best_trial)
     print(best_ckpt)
     print("Done training")

@@ -1,3 +1,4 @@
+from collections import deque
 from random import uniform as randfloat
 
 import gym
@@ -99,6 +100,48 @@ class RewardShapingWrapper(gym.core.Wrapper, MultiAgentEnv):
 
 
 
+class MultiAgentFrameStack(gym.core.Wrapper, MultiAgentEnv):
+    """Frame stacking for multi-agent envs with dict observations.
+
+    Maintains a per-agent frame buffer. Stacked observations are flattened
+    from (num_stack, obs_dim) to (num_stack * obs_dim,) so the observation
+    space stays a 1-D Box compatible with RLLib's MLP model.
+    """
+
+    def __init__(self, env, num_stack=4):
+        super().__init__(env)
+        self.num_stack = num_stack
+        self.frames = {}
+        low = np.tile(self.observation_space.low, num_stack)
+        high = np.tile(self.observation_space.high, num_stack)
+        self.observation_space = gym.spaces.Box(
+            low=low, high=high, dtype=self.observation_space.dtype
+        )
+
+    def _get_stacked(self, agent_id):
+        return np.concatenate(list(self.frames[agent_id]))
+
+    def reset(self):
+        obs = self.env.reset()
+        self.frames = {}
+        for aid, ob in obs.items():
+            self.frames[aid] = deque(
+                [ob] * self.num_stack, maxlen=self.num_stack
+            )
+        return {aid: self._get_stacked(aid) for aid in obs}
+
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        for aid, ob in obs.items():
+            if aid not in self.frames:
+                self.frames[aid] = deque(
+                    [ob] * self.num_stack, maxlen=self.num_stack
+                )
+            else:
+                self.frames[aid].append(ob)
+        return {aid: self._get_stacked(aid) for aid in obs}, reward, done, info
+
+
 def create_rllib_env(env_config: dict = {}):
     """
     Creates a RLLib environment and prepares it to be instantiated by Ray workers.
@@ -107,13 +150,24 @@ def create_rllib_env(env_config: dict = {}):
             You may specify the following keys:
             - variation: one of soccer_twos.EnvType. Defaults to EnvType.multiagent_player.
             - opponent_policy: a Callable for your agent to train against. Defaults to a random policy.
+            - reward_shaping: if True, wraps the env with RewardShapingWrapper. Defaults to False.
     """
     if hasattr(env_config, "worker_index"):
         env_config["worker_id"] = (
             env_config.worker_index * env_config.get("num_envs_per_worker", 1)
             + env_config.vector_index
         )
+    # soccer_twos.make() accepts **env_config and ignores unknown keys,
+    # so reward_shaping passes through harmlessly.
     env = soccer_twos.make(**env_config)
+
+    if env_config.get("reward_shaping", False):
+        env = RewardShapingWrapper(env)
+
+    num_stack = env_config.get("num_framestacks", 0)
+    if num_stack > 1:
+        env = MultiAgentFrameStack(env, num_stack=num_stack)
+
     # env = TransitionRecorderWrapper(env)
     if "multiagent" in env_config and not env_config["multiagent"]:
         # is multiagent by default, is only disabled if explicitly set to False
