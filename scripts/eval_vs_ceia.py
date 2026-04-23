@@ -6,7 +6,7 @@ sys.path.insert(0, ".")
 
 env = soccer_twos.make(render=False)
 from reward_shaping_ppo_agent.agent import RewardShapingPPOAgent
-from ceia_baseline_agent.agent import CEIAAgent
+from ceia_baseline_agent.agent_ray import RayAgent as CEIAAgent
 
 m1 = RewardShapingPPOAgent(env)
 m2 = CEIAAgent(env)
