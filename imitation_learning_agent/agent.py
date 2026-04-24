@@ -15,13 +15,17 @@ from soccer_twos import AgentInterface
 ALGORITHM = "PPO"
 CHECKPOINT_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "checkpoint/checkpoint_002300/checkpoint-2300",
+    "../ray_results/PPO_bc_finetune/"
+    "PPO_Soccer_4d85a_00000_0_2026-04-16_19-09-22/checkpoint_000500/checkpoint-500",
 )
 POLICY_NAME = "default"
 
 
-class RewardShapingPPOAgent(AgentInterface):
-    """PPO selfplay agent loaded from local checkpoint."""
+class ImitationLearningAgent(AgentInterface):
+    """
+    PPO agent initialized with Behavioral Cloning from expert demonstrations,
+    then fine-tuned against the CEIA baseline.
+    """
 
     def __init__(self, env: gym.Env):
         super().__init__()
@@ -32,36 +36,31 @@ class RewardShapingPPOAgent(AgentInterface):
         if CHECKPOINT_PATH:
             config_dir = os.path.dirname(CHECKPOINT_PATH)
             config_path = os.path.join(config_dir, "params.pkl")
-            # Try parent directory.
             if not os.path.exists(config_path):
                 config_path = os.path.join(config_dir, "../params.pkl")
 
-        # Load the config from pickled.
         if os.path.exists(config_path):
             with open(config_path, "rb") as f:
                 config = pickle.load(f)
         else:
-            # If no config in given checkpoint -> Error.
             raise ValueError(
                 "Could not find params.pkl in either the checkpoint dir or "
                 "its parent directory!"
             )
 
-        # no need for parallelism on evaluation
+        # No parallelism for evaluation
         config["num_workers"] = 0
         config["num_gpus"] = 0
 
         tune.registry.register_env("DummyEnv", lambda *_: BaseEnv())
         config["env"] = "DummyEnv"
 
-        # create the Trainer from config
+        # Create trainer and restore checkpoint
         cls = get_trainable_cls(ALGORITHM)
         agent = cls(env=config["env"], config=config)
-        # load state from checkpoint
         agent.restore(CHECKPOINT_PATH)
-        # get policy for evaluation
-        self.policy = agent.get_policy(POLICY_NAME)
 
+        self.policy = agent.get_policy(POLICY_NAME)
 
     def act(self, observation: Dict[int, np.ndarray]) -> Dict[int, np.ndarray]:
         actions = {}

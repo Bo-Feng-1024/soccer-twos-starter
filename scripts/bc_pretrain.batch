@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Behavioral Cloning pretraining — collect expert data + train BC model
+# Two phases: (1) collect_expert_data.py ~30min  (2) train_bc.py ~10min
+
+#SBATCH --job-name=bc_pretrain
+#SBATCH -N1 --ntasks-per-node=8
+#SBATCH --mem-per-cpu=6G
+#SBATCH -t2:00:00
+#SBATCH --output=soccerstwos-%j.out
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=bfeng66@gatech.edu
+
+module load anaconda3
+conda activate soccertwos
+
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+export PYTHONUNBUFFERED=1
+
+echo "=== Phase 1: Collecting expert data ==="
+python -u collect_expert_data.py && \
+echo "=== Phase 2: Training BC model ===" && \
+python -u train_bc.py
+
+echo "=== Done ==="
+ls -lh expert_data.npz bc_weights.pt 2>/dev/null
