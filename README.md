@@ -1,5 +1,7 @@
 # Soccer-Twos Starter Kit
 
+🏆 **Our agent won 1st place in the CS8803 DRL Final Project Tournament (72 teams)!**
+
 Example training/testing scripts for the Soccer-Twos environment. This starter code is modified from the example code provided in https://github.com/bryanoliveira/soccer-twos-starter.
 
 Environment-level specification code can be found at https://github.com/bryanoliveira/soccer-twos-env, which may also be useful to reference.
