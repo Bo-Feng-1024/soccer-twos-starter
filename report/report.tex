@@ -121,9 +121,10 @@ team's reward exceeds 0.3; (b)~team-vs-CEIA training where opponents are sampled
 predominantly from the fixed CEIA baseline with an opponent-update cooldown to prevent
 destabilising the policy; and (c)~self-play 70\%~+~CEIA 30\%, inspired
 by~\citet{brandao2022marl} who report high win rates in robotic soccer when self-play
-dominates the opponent pool but a fixed reference opponent is retained. This 70/30 mix gave us the highest CEIA win
-rate by combining strategy diversity from self-play with direct exposure to the
-evaluation opponent. Each iteration samples 20\,000 environment steps across 7 parallel
+dominates the opponent pool but a fixed reference opponent is retained. This 70/30
+mix, together with the separated policy/value networks (Sec.~\ref{sec:algorithm}),
+gave us the highest CEIA win rate by combining strategy diversity from self-play
+with direct exposure to the evaluation opponent. Each iteration samples 20\,000 environment steps across 7 parallel
 workers; training uses a learning-rate schedule from $3\!\times\!10^{-4}$ down to
 $3\!\times\!10^{-5}$, an entropy bonus of $0.005$, and gradient clipping at $0.5$
 (Table~\ref{tab:hp}).
@@ -208,7 +209,9 @@ team-vs-CEIA variant reaches 68\% but is outperformed by the 70/30 mixture.
 \begin{table}[h]
 \centering\small
 \caption{Win rate of each agent (draws excluded from the percentages). Agent~3 never
-won a match against CEIA; we therefore also report its mean episode reward.}
+won a match against CEIA; we therefore also report its mean episode reward.
+Checkpoint indices listed in individual rows are from different training runs with
+different starting points and are not directly comparable as a step-count axis.}
 \label{tab:results}
 \begin{tabular}{l c c}
 \toprule
@@ -272,13 +275,14 @@ during PPO fine-tune. Three factors explain the gap. (a)~\emph{Distribution
 shift}: the expert is a near-optimal policy whose state visitation differs
 sharply from a freshly-initialised PPO learner. The BC student is therefore
 queried during fine-tune on states the expert rarely visited, where its 24.3\%
-residual action error compounds. (b)~\emph{Value-function cold-start}: BC
-transfers only the policy network and leaves PPO's critic randomly initialised,
-so early advantage estimates are noisy and policy updates are unstable.
+residual action error compounds. (b)~\emph{Value-function cold-start}: under \texttt{vf\_share=True}, BC
+initialises the shared trunk and policy head, but PPO's value head remains
+randomly initialised, so early advantage estimates are noisy and policy
+updates are unstable.
 (c)~\emph{Adversarial amplification}: each incorrect action hands the opponent
 a scoring opportunity, unlike single-agent or cooperative tasks where small
-errors are recoverable. The pattern matches the DAgger
-analysis~\citep{ross2011dagger}. A follow-up using
+errors are recoverable. The pattern matches the DAgger covariate-shift
+analysis. A follow-up using
 DAgger~\citep{ross2011dagger} or GAIL~\citep{ho2016gail} --- which both
 re-query the expert on states the learner visits --- would address (a)
 directly, though we have not run this experiment.
