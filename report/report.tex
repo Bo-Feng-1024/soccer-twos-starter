@@ -291,10 +291,9 @@ updates are unstable.
 a scoring opportunity, unlike single-agent or cooperative tasks where small
 errors are recoverable. The pattern matches the DAgger covariate-shift
 analysis~\citep{ross2011dagger}. A follow-up using DAgger would directly
-address (a) by re-querying the expert on learner-visited states;
-GAIL~\citep{ho2016gail} is another imitation-learning alternative, though it
-uses adversarial training over expert/learner state-action distributions
-rather than per-state re-query. We have not run this experiment.
+address~(a) by re-querying the expert on learner-visited states;
+GAIL~\citep{ho2016gail} is an adversarial-imitation alternative. We have not
+run this experiment.
 
 \paragraph{Code and reproducibility.}
 All training scripts, the reward-shaping wrapper, the BC pipeline, and the
