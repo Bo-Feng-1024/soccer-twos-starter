@@ -15,7 +15,7 @@ This repository contains our final project submission for CS8803 Deep Reinforcem
 ## Authors
 
 - Bo Feng (bfeng66@gatech.edu)
-- Frank Yang (frank.yang@gatech.edu)
+- Frank F. Yang (frank.yang@gatech.edu)
 
 ## Report
 
@@ -37,7 +37,7 @@ We trained and analysed three agents, all PPO-based via Ray RLlib:
 
 ## Reward Modification
 
-The reward-shaping wrapper (the rubric's environment-modification component, +40 pts) is implemented in [`reward_shaping_ppo_agent/utils.py`](reward_shaping_ppo_agent/utils.py), lines 18–102 (`RewardShapingWrapper`). It adds six dense per-step signals on top of the sparse goal reward:
+The reward-shaping wrapper (the rubric's environment-modification component, +40 pts) is implemented in [`utils.py`](utils.py), lines 18–102 (`RewardShapingWrapper`). The same file is also bundled inside the submitted agent zip at [`Answer to the Ultimate Question of Life, The Universe, and Everything_AGENT/utils.py`](Answer%20to%20the%20Ultimate%20Question%20of%20Life%2C%20The%20Universe%2C%20and%20Everything_AGENT/utils.py). It adds six dense per-step signals on top of the sparse goal reward:
 
 | Signal       | Weight    | Description                                            |
 | ---          | ---       | ---                                                    |
