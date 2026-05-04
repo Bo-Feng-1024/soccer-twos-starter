@@ -174,23 +174,28 @@ overly deterministic BC policy.
 \label{sec:results}
 
 \paragraph{Training curves.}
-Figure~\ref{fig:curves} shows episode reward versus environment steps for the
-self-play baseline (Agent~1) and the reward-shaped self-play run (Agent~2). The
-reward-shaped curve plateaus much earlier in training (around 1\,M vs.\ 3-4\,M
-environment steps for the unshaped run). We caution that absolute reward magnitudes
-are not directly comparable between the two curves: the shaping run's episode total
-folds in the per-step shaped signal, so the y-axis values measure different
-quantities. The figure supports a qualitative claim about earlier convergence rather
-than a precise speedup factor.
+Figure~\ref{fig:curves} shows episode reward versus environment steps for each of
+the three agents, plotted on independent y-axes because the per-step reward signal
+differs across runs (Agent~1: sparse goal reward in self-play; Agent~2: shaped
+reward against the 70\%~self-play~/~30\%~CEIA mix, chained across the four
+restart-from-checkpoint segments that produced the submitted policy; Agent~3:
+sparse goal reward against fixed CEIA). Agent~1 climbs steadily to a self-play
+plateau near 1.9; Agent~2 reaches a stable shaped-reward regime around 35--40\,M
+environment steps and was checkpointed at iteration~2300 (the submitted weights);
+Agent~3 briefly spikes early in fine-tuning then collapses to roughly zero by the
+end of 12.5\,M timesteps, the negative result we discuss in Section~\ref{sec:analysis}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.86\linewidth]{figures/training_curves.pdf}
-\caption{Episode reward vs.\ environment steps for the self-play baseline (Agent~1)
-and PPO with reward shaping (Agent~2). Light lines are raw values, bold lines are a
-15-iteration moving average. The reward-shaped run plateaus substantially earlier;
-absolute reward magnitudes are not directly comparable because the shaping run's
-episode total includes the per-step shaped reward.}
+\caption{Episode reward vs.\ environment steps for each agent, on independent
+y-axes (the per-step reward signal is different in each run). Light lines are raw
+values, bold lines are a 25-iteration moving average. \textbf{Agent~1} (left):
+no-shaping pure self-play, reward measured against archived self-copies.
+\textbf{Agent~2} (middle): reward-shaped 70/30 self-play/CEIA mix, chained across
+the four restart-from-checkpoint segments that produced the submitted policy at
+iteration 2300. \textbf{Agent~3} (right): BC-warm-started PPO fine-tuned against
+fixed CEIA; reward briefly spikes early then collapses.}
 \label{fig:curves}
 \end{figure}
 
