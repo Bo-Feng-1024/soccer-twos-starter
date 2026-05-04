@@ -54,7 +54,7 @@ opponent mixture using a separated policy/value network; (iii)~\textbf{Agent~3 -
 BC~+ PPO Fine-tune} (bonus: imitation learning), which collects expert trajectories
 from an intermediate Agent~2 checkpoint, pretrains by behavioral
 cloning~\citep{pomerleau1991bc}, and then fine-tunes against the CEIA baseline. All
-training uses Ray RLlib~\citep{moritz2018ray} v1.4.0 on the Georgia Tech PACE cluster.
+training uses Ray RLlib~\citep{liang2018rllib} v1.4.0 on the Georgia Tech PACE cluster.
 
 %===============================================================================
 \section{Method}
@@ -70,13 +70,14 @@ L^{\mathrm{CLIP}}(\theta) = \mathbb{E}_t\!\left[\min\!\big(r_t(\theta)\hat{A}_t,
 \end{equation}
 where $r_t(\theta) = \pi_\theta(a_t|s_t) / \pi_{\theta_{\text{old}}}(a_t|s_t)$ and
 $\hat{A}_t$ is computed by GAE with $\lambda=0.95$. The observation is the default
-336-dimensional vector (ray casts plus relative positions/velocities of ball, goals,
-and the agent itself); the action is a \textsc{MultiDiscrete}(3,3,3) tuple controlling
-move/rotate/kick. Agents~1 and~3 use the Ray RLlib default \texttt{vf\_share=True}
-(shared 256\,$\times$\,256 MLP for policy and value); Agent~2 uses
-\texttt{vf\_share=False} (two independent 256\,$\times$\,256 MLPs); the separation
-prevents the value loss from dominating the shared gradient and was the single change
-that lifted our win rate from $\sim$78\% to 90\%.
+336-dimensional vector~\citep{soccertwos2021} (ray casts plus relative
+positions/velocities of ball, goals, and the agent itself); the action is a
+\textsc{MultiDiscrete}(3,3,3) tuple controlling move/rotate/kick. Agents~1 and~3 use
+the Ray RLlib default \texttt{vf\_share=True} (shared 256\,$\times$\,256 MLP for policy
+and value); Agent~2 uses \texttt{vf\_share=False} (two independent 256\,$\times$\,256
+MLPs). With a shared trunk we observed the value loss dominating the policy gradient
+mid-training and the win rate plateauing; separating the networks was important for
+reaching our highest win rates.
 
 \subsection{Reward Shaping (Environment Modification)}
 \label{sec:reward-shaping}
@@ -89,7 +90,9 @@ gradient signal \emph{before} any goals are scored teaches basic ball-interactio
 skills (approach + kick), then offensive/defensive shaping orients the policy
 toward goal-directed play, and the separation reward discourages both teammates
 from clustering around the ball. All weights are kept small (max $|w|\!=\!10^{-3}$)
-so that the original $\pm 1$ goal signal still dominates as the policy improves.
+so that the original $\pm 1$ goal signal still dominates as the policy improves;
+this design follows the principle that auxiliary shaping should not overwhelm the
+true return~\citep{ng1999shaping}.
 
 \begin{table}[h]
 \centering\small
@@ -112,12 +115,13 @@ Separation   & $+0.0001$  & Distance between the two teammates (encourage spatia
 \subsection{Training Strategy and Opponent Composition}
 \label{sec:training}
 
-We compare three opponent compositions: (a)~pure self-play with a 4-snapshot archive
-that rotates whenever the team's reward exceeds 0.3; (b)~team-vs-CEIA with 50\% CEIA
-plus a 20-iteration cooldown to prevent over-frequent opponent updates; and
-(c)~self-play 70\%~+~CEIA 30\%, inspired by~\citet{brandao2022marl} who report
-high win rates in robotic soccer when self-play dominates the opponent pool but a
-fixed reference opponent is retained. This 70/30 mix gave us the highest CEIA win
+We compare three opponent compositions: (a)~pure self-play~\citep{bansal2018emergent}
+with a 3-snapshot rolling archive (plus the current trainee) that rotates whenever the
+team's reward exceeds 0.3; (b)~team-vs-CEIA training where opponents are sampled
+predominantly from the fixed CEIA baseline with an opponent-update cooldown to prevent
+destabilising the policy; and (c)~self-play 70\%~+~CEIA 30\%, inspired
+by~\citet{brandao2022marl} who report high win rates in robotic soccer when self-play
+dominates the opponent pool but a fixed reference opponent is retained. This 70/30 mix gave us the highest CEIA win
 rate by combining strategy diversity from self-play with direct exposure to the
 evaluation opponent. Each iteration samples 20\,000 environment steps across 7 parallel
 workers; training uses a learning-rate schedule from $3\!\times\!10^{-4}$ down to
@@ -170,18 +174,22 @@ overly deterministic BC policy.
 
 \paragraph{Training curves.}
 Figure~\ref{fig:curves} shows episode reward versus environment steps for the
-self-play baseline (Agent~1) and the reward-shaped self-play run (Agent~2).
-Reward shaping reaches the asymptotic level of the unshaped run
-\textbf{$\sim$3$\times$ faster} (around 1\,M vs.\ 3-4\,M environment steps); its
-plotted return is also higher because the shaped per-step signal is folded into the
-episode total.
+self-play baseline (Agent~1) and the reward-shaped self-play run (Agent~2). The
+reward-shaped curve plateaus much earlier in training (around 1\,M vs.\ 3-4\,M
+environment steps for the unshaped run). We caution that absolute reward magnitudes
+are not directly comparable between the two curves: the shaping run's episode total
+folds in the per-step shaped signal, so the y-axis values measure different
+quantities. The figure supports a qualitative claim about earlier convergence rather
+than a precise speedup factor.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.86\linewidth]{figures/training_curves.pdf}
 \caption{Episode reward vs.\ environment steps for the self-play baseline (Agent~1)
 and PPO with reward shaping (Agent~2). Light lines are raw values, bold lines are a
-15-iteration moving average. Reward shaping reaches plateau roughly 3$\times$ sooner.}
+15-iteration moving average. The reward-shaped run plateaus substantially earlier;
+absolute reward magnitudes are not directly comparable because the shaping run's
+episode total includes the per-step shaped reward.}
 \label{fig:curves}
 \end{figure}
 
@@ -193,25 +201,24 @@ on the PACE cluster. The submitted agent
 (\textit{PPO Reward Shaped + Self-Play~70\%~/~CEIA~30\%}, checkpoint-2300) reaches
 \textbf{90/100~=~90\%} against CEIA and \textbf{99/100~=~99\%} against the random
 opponent -- both above the project's 9-of-10 target. The pure self-play
-agent oscillates between 46\% and 62\% during training, illustrating the instability
-of self-play without grounding in a fixed reference opponent. The Team-vs-CEIA
-variant (50\% CEIA) reaches 68\% but is dominated by the more diverse 70/30 mixture.
+agent's win rate against CEIA was highly unstable across iterations, illustrating
+the difficulty of self-play without grounding in a fixed reference opponent. The
+team-vs-CEIA variant reaches 68\% but is outperformed by the 70/30 mixture.
 
 \begin{table}[h]
 \centering\small
-\caption{Win rate of each agent across 100-match evaluation series (draws excluded
-from the percentages). Agent~3's reward is reported because it never converged to a
-positive win rate against CEIA.}
+\caption{Win rate of each agent (draws excluded from the percentages). Agent~3 never
+won a match against CEIA; we therefore also report its mean episode reward.}
 \label{tab:results}
 \begin{tabular}{l c c}
 \toprule
 Agent & vs.\ Random Agent & vs.\ CEIA Baseline \\
 \midrule
-Agent~1: PPO Self-Play (no shaping)            & --        & 46--62\% (oscillating) \\
-Agent~2 variant: PPO Team (50\% CEIA)          & --        & 68\% \\
+Agent~1: PPO Self-Play (no shaping)            & --        & unstable across iterations \\
+Agent~2 variant: PPO Team (heavy CEIA mix)     & --        & 68\% \\
 Agent~2 variant: Reward shaping (self-play)    & --        & 85\% (checkpoint-5750) \\
 \textbf{Agent~2: Reward Shaping + 70/30 (\textit{submitted})} & \textbf{99/100 = 99\%} & \textbf{90/100 = 90\%} \\
-Agent~3: BC + PPO fine-tune (bonus method)     & --        & reward $\approx 0.078$ (not competitive) \\
+Agent~3: BC + PPO fine-tune (bonus method)     & --        & 0\% (mean reward $\approx 0.078$) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -228,43 +235,51 @@ matched number of iterations).
 \label{sec:analysis}
 
 \paragraph{Reward shaping accelerates convergence.}
-Figure~\ref{fig:curves} shows that reward shaping converges about 3$\times$ faster than
-the unshaped baseline. Each of the six dense signals provides a non-zero gradient even
-when no goal is scored, which breaks the chicken-and-egg problem of a sparse-reward
-MARL environment where both teams initially produce random play.
+Figure~\ref{fig:curves} shows that reward shaping reaches a plateau substantially
+earlier than the unshaped baseline. Each of the six dense signals provides a non-zero
+gradient even when no goal is scored, which breaks the chicken-and-egg problem of a
+sparse-reward MARL environment where both teams initially produce random play.
 
 \paragraph{Self-play instability.}
-Pure self-play oscillates between 15\% and 62\% win rate against CEIA. Two settings
-caused this: (1)~with \texttt{entropy\_coeff}\,$=\!0$, policy entropy collapsed
-from $\sim$3.0 to $\sim$0.5 within 1\,M steps, locking in narrow strategies that did
-not generalise beyond the self-play archive; (2)~with \texttt{grad\_clip} disabled,
-goal-event rewards produced large updates that erased prior learning. Setting
+Pure self-play training was highly unstable, with the win rate against CEIA varying
+substantially across iterations. Two settings caused this: (1)~with
+\texttt{entropy\_coeff}\,$=\!0$, policy entropy collapsed from $\sim$3.0 to $\sim$0.5
+within 1\,M steps, locking in narrow strategies that did not generalise beyond the
+self-play archive; (2)~with \texttt{grad\_clip} disabled, goal-event rewards produced
+large updates that erased prior learning. Setting
 \texttt{entropy\_coeff}\,$=\!0.005$ and \texttt{grad\_clip}\,$=\!0.5$ removed both
-failure modes. Switching to \texttt{vf\_share=False} produced a further jump from
-$\sim$78\% to 90\% by stopping the value loss from dominating the shared gradient.
+failure modes. Switching to \texttt{vf\_share=False} also helped: with a shared trunk
+the value loss dominated the policy gradient mid-training and the win rate plateaued
+below the level reached with separated networks.
 
-\paragraph{Opponent composition drives the CEIA win rate.}
-Across our experiments the strongest lever on the CEIA win rate was the share
-of CEIA in the opponent pool, not the algorithm: 0\% CEIA gave 46--62\%
-(unstable), 50\% CEIA reached 68\%, and 70\% self-play~/~30\% CEIA reached 90\%.
-The 70/30 mix retains enough self-play for the agent to develop coordinated
-behaviour (e.g.\ passing, blocking) without over-fitting to a single fixed
-opponent, while still keeping the gradient signal anchored on the evaluation
-opponent.
+\paragraph{Opponent composition and network separation jointly drive the CEIA
+win rate.}
+Two design choices, not one, gave the submitted agent its 90\% CEIA win rate. First,
+the share of CEIA in the opponent pool: pure self-play was unstable, heavy CEIA
+training reached 68\%, and the 70\%~/~30\% self-play/CEIA mix reached 85--90\%.
+Second, separating the policy and value networks (\texttt{vf\_share=False}): with the
+identical 70/30 mix, a run with shared networks (continued from checkpoint-5122)
+reached 85\%, while a run with separated networks (continued from checkpoint-1700)
+reached 90\%. We caution that these two runs also differ in their starting
+checkpoint, so the comparison is suggestive of a positive effect of network separation
+rather than a clean ablation. The 70/30 mix retains enough self-play to develop
+coordinated behaviour (e.g.\ passing, blocking) without over-fitting to a single
+opponent, while still anchoring the gradient signal on the evaluation target.
 
 \paragraph{Why behavioral cloning failed in this adversarial setting.}
 75.7\% expert-action accuracy did not translate into any measurable advantage
 during PPO fine-tune. Three factors explain the gap. (a)~\emph{Distribution
-shift}: expert demonstrations were collected against a varied opponent, but
-fine-tuning runs against fixed CEIA, so the BC policy is queried on states it
-never saw and the residual 24.3\% action error compounds.
-(b)~\emph{Value-function cold-start}: BC transfers only the policy network and
-leaves PPO's critic randomly initialised, so early advantage estimates are noisy
-and policy updates are unstable. (c)~\emph{Adversarial amplification}: each
-incorrect action hands the opponent a scoring opportunity, unlike single-agent
-or cooperative tasks where small errors are recoverable. The pattern matches
-the DAgger analysis~\citep{ross2011dagger} and the emergent-competition results
-of~\citet{bansal2018emergent}. A follow-up using DAgger or GAIL --- which both
+shift}: the expert is a near-optimal policy whose state visitation differs
+sharply from a freshly-initialised PPO learner. The BC student is therefore
+queried during fine-tune on states the expert rarely visited, where its 24.3\%
+residual action error compounds. (b)~\emph{Value-function cold-start}: BC
+transfers only the policy network and leaves PPO's critic randomly initialised,
+so early advantage estimates are noisy and policy updates are unstable.
+(c)~\emph{Adversarial amplification}: each incorrect action hands the opponent
+a scoring opportunity, unlike single-agent or cooperative tasks where small
+errors are recoverable. The pattern matches the DAgger
+analysis~\citep{ross2011dagger}. A follow-up using
+DAgger~\citep{ross2011dagger} or GAIL~\citep{ho2016gail} --- which both
 re-query the expert on states the learner visits --- would address (a)
 directly, though we have not run this experiment.
 
