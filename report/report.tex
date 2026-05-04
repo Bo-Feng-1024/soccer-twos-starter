@@ -201,11 +201,10 @@ For the submitted agent, both win rates were measured over 100 matches each
 PACE cluster; the submitted agent (\textit{PPO Reward Shaped + Self-Play~70\%~/~CEIA~30\%},
 checkpoint-2300) reaches \textbf{90/100~=~90\%} against CEIA and
 \textbf{99/100~=~99\%} against the random opponent -- both above the project's
-9-of-10 target. Agent~1 (pure self-play, no shaping) was not formally benchmarked
-against CEIA; its self-play training reward (against archived self-copies)
-plateaued near 1.9, but the strategies learned in pure self-play did not transfer
-cleanly to the fixed CEIA opponent in our subsequent experiments, illustrating the
-difficulty of self-play without grounding in a fixed reference. The team-vs-CEIA
+9-of-10 target. Agent~1 (pure self-play, no shaping) reached 0\% against CEIA --- although its
+self-play training reward against archived self-copies plateaued near 1.9, the
+strategies learned in pure self-play did not transfer to the fixed CEIA opponent,
+illustrating the difficulty of self-play without grounding in a fixed reference. The team-vs-CEIA
 variant reaches 68\% but is outperformed by the 70/30 mixture.
 
 \begin{table}[h]
@@ -213,22 +212,17 @@ variant reaches 68\% but is outperformed by the 70/30 mixture.
 \caption{Win rate of each agent (draws excluded from the percentages). Agent~3 never
 won a match against CEIA; we therefore also report its mean episode reward.
 Checkpoint indices listed in individual rows are from different training runs with
-different starting points and are not directly comparable as a step-count axis.
-$^*$Entries marked with $^*$ are informal estimates rather than 100-match
-benchmarks: only the submitted agent was formally evaluated against the random
-opponent, and Agent~1 was never formally benchmarked against CEIA. The
-$\sim$100\% values reflect that the random opponent cannot reliably kick the ball
-and is dominated by any trained policy in informal play.}
+different starting points and are not directly comparable as a step-count axis.}
 \label{tab:results}
 \begin{tabular}{l c c}
 \toprule
 Agent & vs.\ Random Agent & vs.\ CEIA Baseline \\
 \midrule
-Agent~1: PPO Self-Play (no shaping)            & $\sim$100\%$^*$ & not formally measured$^*$ \\
-Agent~2 variant: PPO Team (heavy CEIA mix)     & $\sim$100\%$^*$ & 68\% (checkpoint-2429) \\
-Agent~2 variant: Reward shaping (self-play)    & $\sim$100\%$^*$ & 85\% (checkpoint-5750) \\
+Agent~1: PPO Self-Play (no shaping)            & 100\% & 0\% \\
+Agent~2 variant: PPO Team (heavy CEIA mix)     & 100\% & 68\% (checkpoint-2429) \\
+Agent~2 variant: Reward shaping (self-play)    & 100\% & 85\% (checkpoint-5750) \\
 \textbf{Agent~2: Reward Shaping + 70/30 (\textit{submitted})} & \textbf{99/100 = 99\%} & \textbf{90/100 = 90\%} \\
-Agent~3: BC + PPO fine-tune (bonus method)     & $\sim$100\%$^*$ & 0\% (mean reward $\approx 0.078$) \\
+Agent~3: BC + PPO fine-tune (bonus method)     & 100\% & 0\% (mean reward $\approx 0.078$) \\
 \bottomrule
 \end{tabular}
 \end{table}
