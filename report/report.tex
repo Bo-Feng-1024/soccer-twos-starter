@@ -29,7 +29,7 @@ from random initialisation. We add a six-signal reward-shaping wrapper
 (ball-approach, kick, offensive/defensive, time, team-separation), separate the
 policy and value networks, and mix the opponent pool 70\% self-play / 30\% CEIA
 baseline. The submitted agent reaches \textbf{90\% (90/100) against the CEIA
-baseline} and \textbf{100\% (20/20) against a random opponent}. A third agent
+baseline} and \textbf{99\% (99/100) against a random opponent}. A third agent
 warm-starts PPO from a behavioral-cloning policy that reaches 75.7\%
 expert-action accuracy; it does not outperform random initialisation when
 fine-tuned against CEIA, which we trace to distribution shift, a cold-start
@@ -187,12 +187,11 @@ and PPO with reward shaping (Agent~2). Light lines are raw values, bold lines ar
 
 \paragraph{Performance comparison.}
 Table~\ref{tab:results} summarises win rates against the random and CEIA opponents.
-Win rate against CEIA was measured by 100 evaluation matches
-(\texttt{scripts/eval\_vs\_ceia.py}); the random-opponent rate was measured by
-20 matches against \texttt{selfmade\_random\_agent}
-(\texttt{scripts/eval\_vs\_random.py}). The submitted agent
+Both win rates were measured over 100 matches each
+(\texttt{scripts/eval\_vs\_ceia.py} and \texttt{scripts/eval\_vs\_random.py})
+on the PACE cluster. The submitted agent
 (\textit{PPO Reward Shaped + Self-Play~70\%~/~CEIA~30\%}, checkpoint-2300) reaches
-\textbf{90/100~=~90\%} against CEIA and \textbf{20/20~=~100\%} against the random
+\textbf{90/100~=~90\%} against CEIA and \textbf{99/100~=~99\%} against the random
 opponent -- both above the project's 9-of-10 target. The pure self-play
 agent oscillates between 46\% and 62\% during training, illustrating the instability
 of self-play without grounding in a fixed reference opponent. The Team-vs-CEIA
@@ -211,7 +210,7 @@ Agent & vs.\ Random Agent & vs.\ CEIA Baseline \\
 Agent~1: PPO Self-Play (no shaping)            & --        & 46--62\% (oscillating) \\
 Agent~2 variant: PPO Team (50\% CEIA)          & --        & 68\% \\
 Agent~2 variant: Reward shaping (self-play)    & --        & 85\% (checkpoint-5750) \\
-\textbf{Agent~2: Reward Shaping + 70/30 (\textit{submitted})} & \textbf{20/20 = 100\%} & \textbf{90/100 = 90\%} \\
+\textbf{Agent~2: Reward Shaping + 70/30 (\textit{submitted})} & \textbf{99/100 = 99\%} & \textbf{90/100 = 90\%} \\
 Agent~3: BC + PPO fine-tune (bonus method)     & --        & reward $\approx 0.078$ (not competitive) \\
 \bottomrule
 \end{tabular}
