@@ -84,7 +84,7 @@ reaching our highest win rates.
 
 The default game reward ($+1$ on a goal scored, $-1$ on a goal conceded) is too sparse
 to train from scratch. We wrap the multi-agent environment with a
-\texttt{RewardShapingWrapper} (\texttt{reward\_shaping\_ppo\_agent/utils.py}) that adds
+\texttt{RewardShapingWrapper} (\texttt{utils.py}) that adds
 six dense per-step rewards (Table~\ref{tab:rewards}). The hypothesis is that providing
 gradient signal \emph{before} any goals are scored teaches basic ball-interaction
 skills (approach + kick), then offensive/defensive shaping orients the policy
@@ -292,7 +292,7 @@ All training scripts, the reward-shaping wrapper, the BC pipeline, and the
 evaluation utilities are available at\\
 \url{https://github.com/Bo-Feng-1024/soccer-twos-starter}. The reward modification
 referenced in Table~\ref{tab:rewards} is implemented in
-\texttt{reward\_shaping\_ppo\_agent/utils.py} (lines 18-100), the BC pipeline in
+\texttt{utils.py} (lines 18-102), the BC pipeline in
 \texttt{train\_bc\_finetune.py} and \texttt{collect\_expert\_data.py}, and the
 self-play training loop in \texttt{train\_ray\_selfplay.py}.
 
