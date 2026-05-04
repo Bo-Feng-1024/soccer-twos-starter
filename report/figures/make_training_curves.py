@@ -32,15 +32,14 @@ def smooth(y, k=20):
 
 
 def plot_agent(ax, df, title, color):
-    x = df["timesteps_total"].values
+    x = df["timesteps_total"].values / 1e6  # show steps in millions
     y = df["episode_reward_mean"].values
     ax.plot(x, y, color=color, alpha=0.20, linewidth=0.6)
     ax.plot(x, smooth(y, 25), color=color, linewidth=1.6)
-    ax.set_xlabel("Environment Steps")
+    ax.set_xlabel("Environment Steps (millions)")
     ax.set_ylabel("Episode Reward Mean")
     ax.set_title(title, fontsize=8.5)
     ax.grid(True, alpha=0.3)
-    ax.ticklabel_format(style="sci", axis="x", scilimits=(0, 0))
 
 
 agent1 = load(AGENT1)
