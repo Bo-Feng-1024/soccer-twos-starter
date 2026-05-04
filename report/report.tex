@@ -246,9 +246,9 @@ sparse-reward MARL environment where both teams initially produce random play.
 \paragraph{Self-play instability.}
 Pure self-play training was highly unstable, with the win rate against CEIA varying
 substantially across iterations. Two settings caused this: (1)~with
-\texttt{entropy\_coeff}\,$=\!0$, policy entropy collapsed from $\sim$3.0 to $\sim$0.5
-within 1\,M steps, locking in narrow strategies that did not generalise beyond the
-self-play archive; (2)~with \texttt{grad\_clip} disabled, goal-event rewards produced
+\texttt{entropy\_coeff}\,$=\!0$, we observed policy entropy fall from $\sim$3.0 to
+$\sim$0.5 within 1\,M steps in our TensorBoard logs, locking in narrow strategies
+that did not generalise beyond the self-play archive; (2)~with \texttt{grad\_clip} disabled, goal-event rewards produced
 large updates that erased prior learning. Setting
 \texttt{entropy\_coeff}\,$=\!0.005$ and \texttt{grad\_clip}\,$=\!0.5$ removed both
 failure modes. Switching to \texttt{vf\_share=False} also helped: with a shared trunk
@@ -282,8 +282,8 @@ updates are unstable.
 (c)~\emph{Adversarial amplification}: each incorrect action hands the opponent
 a scoring opportunity, unlike single-agent or cooperative tasks where small
 errors are recoverable. The pattern matches the DAgger covariate-shift
-analysis. A follow-up using
-DAgger~\citep{ross2011dagger} or GAIL~\citep{ho2016gail} --- which both
+analysis~\citep{ross2011dagger}. A follow-up using
+DAgger or GAIL~\citep{ho2016gail} --- which both
 re-query the expert on states the learner visits --- would address (a)
 directly, though we have not run this experiment.
 
