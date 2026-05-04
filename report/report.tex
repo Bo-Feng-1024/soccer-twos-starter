@@ -42,7 +42,7 @@ critic, and the amplification of small action errors in adversarial play.
 \section{Overview}
 \label{sec:overview}
 
-SoccerTwos~\citep{soccertwos2021} is a 2-vs-2 physics-based soccer environment built
+SoccerTwos~\citep{soccertwos} is a 2-vs-2 physics-based soccer environment built
 on Unity ML-Agents in which goal events are sparse and the opponent is non-stationary
 under self-play. We submit three trained agents that share a PPO~\citep{schulman2017ppo}
 backbone with Generalized Advantage Estimation~\citep{schulman2016gae} but differ in
@@ -51,7 +51,7 @@ how the environment, opponent distribution, and initialization are handled:
 default game reward; (ii)~\textbf{Agent~2 -- PPO + Reward Shaping}, which is also our
 final submission, adds six dense rewards and trains with a 70\%~self-play / 30\%~CEIA
 opponent mixture using a separated policy/value network; (iii)~\textbf{Agent~3 --
-BC~+ PPO Fine-tune} (bonus: imitation learning), which collects expert trajectories
+BC~+ PPO Fine-tune}, which collects expert trajectories
 from an intermediate Agent~2 checkpoint, pretrains by behavioral
 cloning~\citep{pomerleau1991bc}, and then fine-tunes against the CEIA baseline. All
 training uses Ray RLlib~\citep{liang2018rllib} v1.4.0 on the Georgia Tech PACE cluster.
@@ -70,7 +70,7 @@ L^{\mathrm{CLIP}}(\theta) = \mathbb{E}_t\!\left[\min\!\big(r_t(\theta)\hat{A}_t,
 \end{equation}
 where $r_t(\theta) = \pi_\theta(a_t|s_t) / \pi_{\theta_{\text{old}}}(a_t|s_t)$ and
 $\hat{A}_t$ is computed by GAE with $\lambda=0.95$. The observation is the default
-336-dimensional vector~\citep{soccertwos2021} (ray casts plus relative
+336-dimensional vector~\citep{soccertwos} (ray casts plus relative
 positions/velocities of ball, goals, and the agent itself); the action is a
 \textsc{MultiDiscrete}(3,3,3) tuple controlling move/rotate/kick. Agents~1 and~3 use
 the Ray RLlib default \texttt{vf\_share=True} (shared 256\,$\times$\,256 MLP for policy
@@ -153,7 +153,7 @@ total steps                 & $\approx 30$M \\
 \end{tabular}
 \end{table}
 
-\subsection{Bonus: Behavioral Cloning + PPO Fine-tune (Agent~3)}
+\subsection{Behavioral Cloning + PPO Fine-tune (Agent~3)}
 \label{sec:bc}
 
 Training PPO from scratch against the full-strength CEIA opponent fails: the random
@@ -260,10 +260,15 @@ win rate.}
 Two design choices, not one, gave the submitted agent its 90\% CEIA win rate. First,
 the share of CEIA in the opponent pool: pure self-play was unstable, heavy CEIA
 training reached 68\%, and the 70\%~/~30\% self-play/CEIA mix reached 85--90\%.
-Second, separating the policy and value networks (\texttt{vf\_share=False}): with the
-identical 70/30 mix, a run with shared networks (continued from checkpoint-5122)
-reached 85\%, while a run with separated networks (continued from checkpoint-1700)
-reached 90\%. We caution that these two runs also differ in their starting
+Second, separating the policy and value networks (\texttt{vf\_share=False}): instead
+of a shared 256$\times$256 MLP feeding both the policy logits and value head (the
+Ray RLlib default \texttt{vf\_share=True}), each function gets its own independent
+256$\times$256 MLP, with the value loss weighted at \texttt{vf\_loss\_coeff}\,=\,0.5.
+This eliminates the gradient interference described above --- with separate trunks
+the value-loss gradient can no longer pull the policy's representation toward
+state-value prediction. With the identical 70/30 mix, a run with shared networks
+(continued from checkpoint-5122) reached 85\%, while a run with separated networks
+(continued from checkpoint-1700) reached 90\%. We caution that these two runs also differ in their starting
 checkpoint, so the comparison is suggestive of a positive effect of network separation
 rather than a clean ablation. The 70/30 mix retains enough self-play to develop
 coordinated behaviour (e.g.\ passing, blocking) without over-fitting to a single
