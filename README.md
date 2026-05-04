@@ -1,10 +1,71 @@
-# Soccer-Twos Starter Kit
+# Soccer-Twos — CS8803 DRL Final Project (Spring 2026)
 
-🏆 **Our agent won 1st place in the CS8803 DRL Final Project Tournament (72 teams)!**
+🏆 **1st place / 72 teams** — Georgia Tech CS8803 Deep Reinforcement Learning
 
-Example training/testing scripts for the Soccer-Twos environment. This starter code is modified from the example code provided in https://github.com/bryanoliveira/soccer-twos-starter.
+This repository contains our final project submission for CS8803 Deep Reinforcement Learning. The starter code is forked from [bryanoliveira/soccer-twos-starter](https://github.com/bryanoliveira/soccer-twos-starter); environment specification lives at [bryanoliveira/soccer-twos-env](https://github.com/bryanoliveira/soccer-twos-env).
 
-Environment-level specification code can be found at https://github.com/bryanoliveira/soccer-twos-env, which may also be useful to reference.
+## Results
+
+| Metric                                       | Result            |
+| ---                                          | ---               |
+| Final Project Tournament (72 teams)          | 🥇 **1st place**  |
+| vs. CEIA baseline (100 matches, headless)    | **90/100 = 90%**  |
+| vs. Random opponent (100 matches, headless)  | **99/100 = 99%**  |
+
+## Authors
+
+- Bo Feng (bfeng66@gatech.edu)
+- Frank Yang (frank.yang@gatech.edu)
+
+## Report
+
+- Compiled PDF: [`report/CS8803_DRL_Final_Report.pdf`](report/CS8803_DRL_Final_Report.pdf)
+- LaTeX source: [`report/report.tex`](report/report.tex)
+
+## Submitted Agents
+
+We trained and analysed three agents, all PPO-based via Ray RLlib:
+
+| Folder | Description |
+| --- | --- |
+| `reward_shaping_ppo_agent/` | **Submitted agent (Agent 2)** — PPO + reward shaping + 70/30 self-play/CEIA mix with separated policy/value networks; the 1st-place agent |
+| `Answer to the Ultimate Question of Life, The Universe, and Everything_AGENT/` | Same agent, packaged as the tournament submission zip |
+| `imitation_learning_agent/` | Bonus Agent 3 — BC pretrain + PPO fine-tune (negative result, analysed in report §4) |
+| `ceia_baseline_agent/` | Course-provided baseline (used as evaluation opponent and as 30% of the opponent pool) |
+| `example_player_agent/` | TA's player-level agent template (unmodified) |
+| `example_team_agent/` | TA's team-level agent template (unmodified) |
+
+## Reward Modification
+
+The reward-shaping wrapper (the rubric's environment-modification component, +40 pts) is implemented in [`reward_shaping_ppo_agent/utils.py`](reward_shaping_ppo_agent/utils.py), lines 18–102 (`RewardShapingWrapper`). It adds six dense per-step signals on top of the sparse goal reward:
+
+| Signal       | Weight    | Description                                            |
+| ---          | ---       | ---                                                    |
+| Approach     | +0.0002   | Velocity component toward the ball                     |
+| Kick         | +0.001    | Ball acceleration when within 1.5 units of the ball    |
+| Offensive    | +0.0004   | Ball velocity toward the opponent goal                 |
+| Defensive    | -0.001    | Ball within 5 units of own goal                        |
+| Time penalty | -0.00002  | Per-step cost to discourage stalling                   |
+| Separation   | +0.0001   | Distance between the two teammates                     |
+
+All weights are kept small (max |w| = 1e-3) so the original ±1 goal reward still dominates as the policy improves; this follows the principle that auxiliary shaping should not overwhelm the true return (Ng et al. 1999).
+
+## Quick Evaluation
+
+After completing the install steps below, the submitted agent can be evaluated end-to-end:
+
+```bash
+# Watch a single match (visual)
+python -m soccer_twos.watch -m1 reward_shaping_ppo_agent -m2 ceia_baseline_agent
+
+# Headless: 100 matches vs. CEIA baseline
+python scripts/eval_vs_ceia.py 100
+
+# Headless: 100 matches vs. random opponent
+python scripts/eval_vs_random.py 100
+```
+
+The 99/100 vs. Random run log is at [`report/eval_vs_random_pace.log`](report/eval_vs_random_pace.log); the 90/100 vs. CEIA run is recorded in `notes/training-log.md` (Job #28, checkpoint-2300).
 
 ## Requirements
 
