@@ -115,13 +115,12 @@ Separation   & $+0.0001$  & Distance between the two teammates (encourage spatia
 \subsection{Training Strategy and Opponent Composition}
 \label{sec:training}
 
-We compare three opponent compositions: (a)~pure self-play~\citep{bansal2018emergent}
-with a 3-snapshot rolling archive (plus the current trainee) that rotates whenever the
-team's reward exceeds 0.3; (b)~team-vs-CEIA training where opponents are sampled
+We compare three opponent compositions: (a)~pure self-play~\citep{bansal2018emergent},
+implemented with a 3-snapshot rolling archive (plus the current trainee) that rotates
+whenever the team's reward exceeds 0.3; (b)~team-vs-CEIA training where opponents are sampled
 predominantly from the fixed CEIA baseline with an opponent-update cooldown to prevent
-destabilising the policy; and (c)~self-play 70\%~+~CEIA 30\%, inspired
-by~\citet{brandao2022marl} who report high win rates in robotic soccer when self-play
-dominates the opponent pool but a fixed reference opponent is retained. This 70/30
+destabilising the policy; and (c)~self-play 70\%~+~CEIA 30\%, inspired by prior robotic-soccer self-play
+work~\citep{brandao2022marl} that combines self-play with a fixed reference opponent. This 70/30
 mix, together with the separated policy/value networks (Sec.~\ref{sec:algorithm}),
 gave us the highest CEIA win rate by combining strategy diversity from self-play
 with direct exposure to the evaluation opponent. Each iteration samples 20\,000 environment steps across 7 parallel
@@ -291,10 +290,11 @@ updates are unstable.
 (c)~\emph{Adversarial amplification}: each incorrect action hands the opponent
 a scoring opportunity, unlike single-agent or cooperative tasks where small
 errors are recoverable. The pattern matches the DAgger covariate-shift
-analysis~\citep{ross2011dagger}. A follow-up using
-DAgger or GAIL~\citep{ho2016gail} --- which both
-re-query the expert on states the learner visits --- would address (a)
-directly, though we have not run this experiment.
+analysis~\citep{ross2011dagger}. A follow-up using DAgger would directly
+address (a) by re-querying the expert on learner-visited states;
+GAIL~\citep{ho2016gail} is another imitation-learning alternative, though it
+uses adversarial training over expert/learner state-action distributions
+rather than per-state re-query. We have not run this experiment.
 
 \paragraph{Code and reproducibility.}
 All training scripts, the reward-shaping wrapper, the BC pipeline, and the
