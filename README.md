@@ -88,61 +88,24 @@ conda create --name soccertwos python=3.8 -y
 conda activate soccertwos
 ```
 
-### 3. Downgrade build tools for compatibility
+### 3. Install dependencies
+
+This setup targets the **Georgia Tech PACE cluster (Linux, Python 3.8)** — the environment in which all training was performed:
 
 ```bash
-pip install pip==23.3.2 setuptools==65.5.0 wheel==0.38.4
-pip cache purge
+pip install -r requirements.txt
+pip install protobuf==3.20.3 pydantic==1.10.13   # not pinned in requirements.txt but required at runtime
 ```
 
-### 4. Install dependencies
+> **Reproducibility note**: `ray==1.4.0` is no longer published on the public PyPI; this install only succeeds in environments where Ray 1.4.0 is reachable (e.g. PACE's pip cache or a private mirror). For other platforms (macOS, Windows, fresh Linux), see the upstream [bryanoliveira/soccer-twos-starter](https://github.com/bryanoliveira/soccer-twos-starter) install instructions. The agent submission ZIP nevertheless carries the trained checkpoint and can be loaded with any `ray>=1.4` that supports the saved checkpoint format.
 
-> **Note:** `requirements.txt` specifies `ray==1.4.0` and `torch<1.9.0`, which are no longer available (especially on macOS Apple Silicon). Install in stages instead:
-
-```bash
-# mlagents dependencies
-pip install grpcio Pillow pyyaml cloudpickle h5py tensorboard numpy
-
-# mlagents packages — use --no-deps to bypass the outdated torch<1.9.0 constraint
-pip install mlagents-envs==0.27.0 gym-unity==0.27.0 mlagents==0.27.0 --no-deps
-pip install "gym==0.19.0" --no-deps
-pip install soccer-twos --no-deps
-
-# PyTorch (arm64 macOS requires >= 1.9.0)
-pip install torch
-
-# Remaining dependencies
-pip install aiohttp==3.7.4 aioredis==1.3.1 dm-tree==0.1.6 "cattrs>=1.1.0,<1.7"
-
-# Ray — 1.4.0 is no longer published; 1.13.0 is the last 1.x release with compatible API
-pip install ray==1.13.0 --no-deps
-pip install "click<=8.0.4,>=7.0" "msgpack<2.0.0,>=1.0.0" jsonschema aiosignal frozenlist virtualenv pandas tabulate tensorboardX lz4 matplotlib scikit-image scipy
-```
-
-### 5. Fix protobuf and pydantic compatibility
-
-```bash
-pip install protobuf==3.20.3
-pip install pydantic==1.10.13
-```
-
-### 6. Apply macOS compatibility patches (macOS only)
-
-Two installed packages need patching on macOS Apple Silicon:
-- `mlagents_envs/rpc_utils.py`: uses `np.bool` which was removed in NumPy 1.24
-- `soccer_twos/package.py`: passes the full binary path to mlagents, but mlagents expects only the base path on macOS (it appends `.app/Contents/MacOS/...` itself)
-
-```bash
-python scripts/mac_patches.py
-```
-
-### 7. Run `python example_random_players.py` to watch random agents play
+### 4. Run `python example_random_players.py` to watch random agents play
 
 ```bash
 python example_random_players.py
 ```
 
-### 8. Train using any of the example scripts
+### 5. Train using any of the example scripts
 
 ```bash
 python example_ray_ppo_sp_still.py
